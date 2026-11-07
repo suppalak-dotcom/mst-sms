@@ -1,0 +1,1276 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบตรวจสอบข้อมูลนักเรียน - โรงเรียนเมืองสุราษฎร์ธานี</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+    <style>
+    :root {
+        --primary-purple: #6b21a8;      /* ม่วงหลัก */
+        --purple-hover: #581c87;        /* ม่วงเข้ม */
+        --purple-light: #f3e8ff;        /* ม่วงอ่อนพาสเทล */
+        --primary-gold: #d97706;        /* ทองหลัก */
+        --yellow-gold: #f59e0b;         /* เหลืองทอง */
+        --gold-light: #fffbeb;          /* ทองพาสเทล */
+        --bg-color: #f8fafc;
+        --sidebar-width: 250px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Sarabun', sans-serif; }
+    body { background-color: var(--bg-color); color: #334155; }
+
+    /* --- ส่วนหน้า Login (ซ่อนไว้ก่อน ป้องกันกระตุกขณะตรวจ Session) --- */
+    #loginSection {
+        display: none;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        flex-direction: column;
+        background: linear-gradient(135deg, #fcfbfe 0%, #f3e8ff 100%);
+        padding: 20px;
+    }
+    .header-section { text-align: center; margin-bottom: 25px; }
+    .logo-placeholder { 
+        width: 80px; height: 80px; 
+        background-color: var(--yellow-gold); 
+        border: 3px solid var(--primary-gold); 
+        border-radius: 12px; 
+        margin: 0 auto 15px auto; 
+        display: flex; justify-content: center; align-items: center; 
+        box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+    }
+    .logo-triangle { width: 0; height: 0; border-left: 25px solid transparent; border-right: 25px solid transparent; border-bottom: 40px solid var(--primary-purple); }
+    .header-title { color: var(--primary-purple); font-size: 24px; font-weight: 700; margin-bottom: 5px; }
+    .title-underline { width: 60px; height: 4px; background: linear-gradient(to right, var(--yellow-gold), var(--primary-purple)); margin: 0 auto 15px auto; border-radius: 2px; }
+    .school-name { font-size: 14px; color: #64748b; line-height: 1.5; font-weight: 500; }
+    .login-card { background: white; padding: 30px; border-radius: 14px; box-shadow: 0 10px 25px rgba(107, 33, 168, 0.12); width: 100%; max-width: 400px; border: 1px solid #f1f5f9; }
+    .input-group { margin-bottom: 20px; }
+    .input-group label { display: block; margin-bottom: 8px; font-size: 14px; font-weight: 600; color: #334155; }
+    .input-group input { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 15px; transition: border-color 0.2s; }
+    .input-group input:focus { outline: none; border-color: var(--primary-purple); box-shadow: 0 0 0 3px rgba(107, 33, 168, 0.1); }
+    #loginError { background-color: #fee2e2; color: #dc2626; padding: 12px; border-radius: 6px; font-size: 14px; margin-bottom: 20px; text-align: center; display: none; }
+    .btn-primary { width: 100%; padding: 12px; background-color: var(--primary-purple); color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background-color 0.2s; }
+    .btn-primary:hover { background-color: var(--purple-hover); }
+
+    /* --- ส่วนโครงสร้างแอปหลัก (SPA Layout) --- */
+    #appSection { display: none; height: 100vh; overflow: hidden; }
+    
+    /* Sidebar */
+    #sidebar {
+        width: var(--sidebar-width); background: white; border-right: 1px solid #e2e8f0;
+        display: flex; flex-direction: column; transition: transform 0.3s ease;
+        position: relative; z-index: 1000;
+    }
+    .sidebar-brand { 
+        padding: 20px; 
+        text-align: center; 
+        background: linear-gradient(135deg, var(--primary-purple), #4c1d95); 
+        color: white; 
+        font-weight: 700; 
+        font-size: 19px; 
+        letter-spacing: 0.5px;
+        border-bottom: 4px solid var(--yellow-gold);
+    }
+    .sidebar-menu { list-style: none; padding: 10px 0; flex-grow: 1; }
+    .sidebar-menu li { padding: 15px 20px; cursor: pointer; color: #475569; transition: all 0.2s ease; border-left: 4px solid transparent; font-weight: 500; }
+    .sidebar-menu li:hover { background: var(--purple-light); color: var(--primary-purple); }
+    .sidebar-menu li.active { background: var(--purple-light); color: var(--primary-purple); border-left-color: var(--yellow-gold); font-weight: 700; }
+    .sidebar-menu li.hidden-menu { display: none; }
+
+    /* Main Content Area */
+    #mainContent { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; width: 100%; }
+    
+    /* Header */
+    header { background: white; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f1f5f9; box-shadow: 0 2px 10px rgba(107, 33, 168, 0.04); }
+    .header-left { display: flex; align-items: center; gap: 15px; }
+    #mobileMenuBtn { display: none; background: none; border: none; font-size: 24px; cursor: pointer; color: var(--primary-purple); }
+    .user-info { font-size: 14px; color: #475569; }
+    .btn-logout { padding: 8px 16px; background: #dc3545; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; transition: background 0.2s; }
+    .btn-logout:hover { background: #b02a37; }
+
+    /* Views Container */
+    .content-body { padding: 20px; overflow-y: auto; flex-grow: 1; background: var(--bg-color); }
+    .view-section { display: none; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.04); border: 1px solid #f1f5f9; }
+    .view-section.active-view { display: block; }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        #appSection { flex-direction: column; }
+        #sidebar { position: absolute; height: 100%; transform: translateX(-100%); box-shadow: 2px 0 10px rgba(0,0,0,0.1); }
+        #sidebar.open { transform: translateX(0); }
+        #mobileMenuBtn { display: block; }
+        .content-body { padding: 12px; }
+        .view-section { padding: 15px; }
+        #filterSection select, #filterSection button { width: 100%; margin-top: 10px; margin-left: 0 !important; }
+    }
+
+    /* --- สไตล์ตาราง --- */
+    .table-responsive { overflow-x: auto; margin-top: 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .data-table { width: 100%; border-collapse: collapse; background: white; min-width: 700px; }
+    .data-table th, .data-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #f1f5f9; font-size: 15px; }
+    .data-table th { background-color: var(--primary-purple); color: white; font-weight: 600; white-space: nowrap; }
+    .data-table tr:hover { background-color: var(--purple-light); }
+
+    .btn-save-status { padding: 6px 12px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px; font-size: 13px; font-weight: 500; }
+    .btn-edit { padding: 6px 12px; background: var(--yellow-gold); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 13px; }
+    .btn-edit:hover { background: var(--primary-gold); }
+
+    /* --- สไตล์ Modal --- */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.55); z-index: 2000; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
+    .modal-content { background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 500px; box-shadow: 0 15px 35px rgba(107, 33, 168, 0.2); border: 1px solid #f1f5f9; }
+    .modal-content h3 { margin-bottom: 20px; color: var(--primary-purple); border-bottom: 3px solid var(--yellow-gold); padding-bottom: 10px; font-weight: 700; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+    .form-group { display: flex; flex-direction: column; }
+    .form-group.full-width { grid-column: span 2; }
+    .form-group label { font-size: 14px; margin-bottom: 5px; font-weight: 600; color: #334155; }
+    .form-group input, .form-group select { padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
+    /* --- สไตล์กล่องสรุปยอด --- */
+    #summarySection { display: none; margin-bottom: 20px; padding: 15px; background: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(107, 33, 168, 0.05); }
+    .summary-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; }
+    .stat-card { background: #f8fafc; padding: 12px 15px; border-radius: 8px; text-align: center; border-left: 4px solid var(--primary-purple); transition: transform 0.2s; }
+    .stat-card:hover { transform: translateY(-2px); }
+    .stat-card .stat-label { font-size: 13px; color: #64748b; margin-bottom: 4px; display: flex; align-items: center; justify-content: center; gap: 5px; font-weight: 600; }
+    .stat-card .stat-value { font-size: 20px; font-weight: 700; color: #1e293b; }
+    .stat-card.total { border-left-color: var(--primary-purple); }
+    .stat-card.total .stat-value { color: var(--primary-purple); }
+    .stat-card.male { border-left-color: #0284c7; }
+    .stat-card.male .stat-value { color: #0284c7; }
+    .stat-card.female { border-left-color: #db2777; }
+    .stat-card.female .stat-value { color: #db2777; }
+    .stat-card.present { border-left-color: #16a34a; background-color: #f0fdf4; }
+    .stat-card.present .stat-value { color: #16a34a; }
+    .stat-card.other { border-left-color: #dc2626; background-color: #fef2f2; }
+    .stat-card.other .stat-value { color: #dc2626; }
+
+    /* --- Toast Notification --- */
+    .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+    .toast { min-width: 280px; padding: 14px 20px; border-radius: 8px; color: white; font-size: 15px; font-weight: 600; box-shadow: 0 4px 15px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 10px; animation: slideIn 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55), fadeOut 0.4s ease 2.6s forwards; }
+    .toast.success { background-color: #16a34a; border-left: 6px solid #15803d; }
+    .toast.error { background-color: #dc2626; border-left: 6px solid #b91c1c; }
+    .toast.info { background-color: var(--primary-purple); border-left: 6px solid var(--yellow-gold); }
+
+    @keyframes slideIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes fadeOut { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-20px); } }
+
+    /* --- Toggle Switch & Banner --- */
+    .switch { position: relative; display: inline-block; width: 48px; height: 24px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .3s; border-radius: 24px; }
+    .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+    input:checked + .slider { background-color: #16a34a; }
+    input:checked + .slider:before { transform: translateX(24px); }
+    input:disabled + .slider { background-color: #e2e8f0; cursor: not-allowed; opacity: 0.6; }
+    .system-closed-banner { background-color: #fef3c7; color: #92400e; padding: 10px 15px; border-radius: 6px; border: 1px solid #fde68a; margin-bottom: 15px; font-size: 14px; font-weight: 500; }
+
+    /* --- Pagination --- */
+    .pagination-container { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding: 10px 5px; flex-wrap: wrap; gap: 10px; background: #ffffff; border-radius: 6px; }
+    .pagination-controls { display: flex; gap: 4px; align-items: center; }
+    .pagination-btn { padding: 6px 12px; border: 1px solid #cbd5e1; background: #fff; color: #334155; border-radius: 4px; cursor: pointer; font-size: 13px; transition: all 0.2s; font-weight: 500; }
+    .pagination-btn:hover:not(:disabled) { background: #f1f5f9; border-color: #94a3b8; }
+    .pagination-btn:disabled { background: #f8fafc; color: #cbd5e1; cursor: not-allowed; border-color: #e2e8f0; }
+    .pagination-btn.active { background: var(--primary-purple); color: white; border-color: var(--primary-purple); font-weight: 700; }
+    .page-size-select { padding: 6px 10px; border-radius: 4px; border: 1px solid #cbd5e1; font-size: 13px; background: white; }
+
+    /* --- Footer ท้ายหน้า --- */
+    .app-footer {
+        margin-top: 25px;
+        padding: 18px 20px;
+        background: #ffffff;
+        border-top: 3px solid var(--yellow-gold);
+        border-radius: 10px;
+        text-align: center;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+    }
+    .app-footer p {
+        margin: 0;
+        font-size: 14px;
+        color: var(--primary-purple);
+        font-weight: 700;
+    }
+    .app-footer small {
+        color: #64748b;
+        font-size: 13px;
+        display: block;
+        margin-top: 4px;
+    }
+
+/* Responsive Design (ปรับแต่งการ์ดบนมือถือให้พอดีจอ ไม่ล้นออกข้าง) */
+/* Responsive Design สำหรับมือถือ (รองรับทั้ง iOS Safari และ Android Chrome) */
+@media screen and (max-width: 768px) {
+    #appSection { flex-direction: column; }
+    #sidebar { position: absolute; height: 100%; transform: translateX(-100%); box-shadow: 2px 0 10px rgba(0,0,0,0.1); }
+    #sidebar.open { transform: translateX(0); }
+    #mobileMenuBtn { display: block; }
+    .content-body { padding: 10px !important; }
+    .view-section { padding: 12px !important; }
+    #filterSection select, #filterSection button { width: 100%; margin-top: 10px; margin-left: 0 !important; }
+
+    /* 1. ปลดล็อกความกว้างตาราง บังคับพอดีหน้าจอมือถือ 100% ไม่ล้นออกข้าง */
+    .table-responsive {
+        overflow: visible !important;
+        overflow-x: visible !important;
+        box-shadow: none !important;
+        background: transparent !important;
+        margin-top: 10px !important;
+        width: 100% !important;
+    }
+
+    .data-table {
+        display: block !important;
+        width: 100% !important;
+        min-width: 0 !important; /* 🔥 ปลดล็อก min-width 700px เดิม */
+    }
+
+    .data-table thead {
+        display: none !important;
+    }
+
+    .data-table tbody,
+    .data-table tr {
+        display: block !important;
+        width: 100% !important;
+    }
+
+    /* 2. สไตล์ตัวการ์ดนักเรียน */
+    .data-table tr {
+        margin-bottom: 14px !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 12px !important;
+        background: #ffffff !important;
+        box-shadow: 0 4px 12px rgba(107, 33, 168, 0.08) !important;
+        padding: 12px 14px !important;
+        border-left: 5px solid var(--primary-purple) !important;
+        box-sizing: border-box !important;
+    }
+
+    /* 3. จัดการแสดงผลข้อมูลแต่ละบรรทัดในการ์ด */
+    .data-table td {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        padding: 8px 0 !important;
+        border-bottom: 1px dashed #e2e8f0 !important;
+        font-size: 14px !important;
+        text-align: right !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .data-table td:last-child {
+        border-bottom: none !important;
+        padding-top: 10px !important;
+        justify-content: flex-end !important;
+    }
+
+    /* 4. บังคับแสดงหัวข้อสีม่วงฝั่งซ้ายบนมือถือ */
+    .data-table td::before {
+        content: attr(data-label) !important;
+        font-weight: 700 !important;
+        color: var(--primary-purple) !important;
+        text-align: left !important;
+        padding-right: 12px !important;
+        font-size: 14px !important;
+        white-space: nowrap !important;
+        flex-shrink: 0 !important;
+    }
+
+    .data-table td select {
+        max-width: 160px !important;
+        padding: 4px 6px !important;
+        font-size: 13px !important;
+    }
+}
+
+/* ========================================== */
+/*  Premium Login Styling                      */
+/* ========================================== */
+@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap');
+
+.login-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at 50% 15%, #2e1065 0%, #0f172a 100%);
+    font-family: 'Kanit', sans-serif;
+    position: relative;
+    overflow: hidden;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+/* แสง Glow เรืองแสงนุ่มนวลด้านหลังการ์ด */
+.login-wrapper::before {
+    content: '';
+    position: absolute;
+    width: 380px;
+    height: 380px;
+    background: linear-gradient(135deg, #7c3aed, #db2777);
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.4;
+    top: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+    animation: pulseGlow 6s ease-in-out infinite alternate;
+}
+
+@keyframes pulseGlow {
+    0% { transform: translateX(-50%) scale(0.85); opacity: 0.3; }
+    100% { transform: translateX(-50%) scale(1.15); opacity: 0.5; }
+}
+
+/* การ์ด Glassmorphic */
+.login-card {
+    width: 100%;
+    max-width: 430px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 24px;
+    padding: 42px 36px 30px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45),
+                0 0 0 1px rgba(255, 255, 255, 0.3);
+    position: relative;
+    z-index: 1;
+}
+
+/* ส่วนหัวและโลโก้ */
+.login-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+/* ========================================== */
+/*  ปรับกรอบโลโก้เป็นทรงสี่เหลี่ยม                 */
+/* ========================================== */
+.logo-wrapper {
+    width: 110px;
+    height: 110px;
+    margin: 0 auto 16px;
+    border-radius: 16px; /* สี่เหลี่ยมขอบมนพรีเมียม (หากต้องการเหลี่ยมสนิทให้เปลี่ยนเป็น 0px) */
+    padding: 4px;
+    background: linear-gradient(135deg, #6366f1, #a855f7, #ec4899);
+    box-shadow: 0 10px 25px rgba(124, 58, 237, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.4s ease;
+}
+
+.logo-wrapper:hover {
+    transform: scale(1.05);
+}
+
+.school-logo {
+    width: 100%;
+    height: 100%;
+    object-fit: contain; /* แสดงสัดส่วนรูปโลโก้ทรงสี่เหลี่ยมได้ครบถ้วน ไม่ถูกตัดขอบ */
+    border-radius: 12px; /* เปลี่ยนเป็น 0px ได้หากต้องการให้มุมฉาก 100% */
+    background: #ffffff;
+}
+
+.system-title {
+    color: #1e1b4b;
+    font-size: 21px;
+    font-weight: 700;
+    margin: 0 0 4px;
+    letter-spacing: -0.3px;
+}
+
+.system-subtitle {
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 400;
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+}
+
+/* ฟอร์มและช่องกรอกข้อมูล */
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.input-group label {
+    color: #334155;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.input-field-wrapper input {
+    width: 100%;
+    padding: 13px 16px;
+    border-radius: 12px;
+    border: 1.5px solid #e2e8f0;
+    background: #f8fafc;
+    font-size: 14px;
+    font-family: inherit;
+    color: #0f172a;
+    transition: all 0.25s ease;
+    box-sizing: border-box;
+}
+
+.input-field-wrapper input:focus {
+    outline: none;
+    border-color: #7c3aed;
+    background: #ffffff;
+    box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.15);
+}
+
+/* ข้อความแสดง Error */
+.login-error-msg {
+    background: #fff1f2;
+    color: #be123c;
+    border: 1px solid #fecdd3;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    text-align: center;
+}
+
+/* ปุ่มเข้าสู่ระบบพรีเมียม */
+.btn-login-premium {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #6d28d9 0%, #4f46e5 100%);
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    box-shadow: 0 8px 20px rgba(109, 40, 217, 0.35);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.btn-login-premium:hover {
+    background: linear-gradient(135deg, #5b21b6 0%, #4338ca 100%);
+    box-shadow: 0 12px 25px rgba(109, 40, 217, 0.5);
+    transform: translateY(-2px);
+}
+
+.btn-login-premium:active {
+    transform: translateY(0);
+    box-shadow: 0 4px 12px rgba(109, 40, 217, 0.25);
+}
+
+.btn-arrow {
+    font-size: 14px;
+    transition: transform 0.3s ease;
+}
+
+.btn-login-premium:hover .btn-arrow {
+    transform: translateX(4px);
+}
+
+/* ส่วนท้าย */
+.login-footer {
+    margin-top: 28px;
+    text-align: center;
+    border-top: 1px solid #f1f5f9;
+    padding-top: 16px;
+}
+
+.login-footer p {
+    color: #94a3b8;
+    font-size: 11.5px;
+    margin: 0;
+}
+
+/* รองรับจอขนาดเล็ก (มือถือ) */
+@media (max-width: 480px) {
+    .login-card {
+        padding: 32px 24px 24px;
+        border-radius: 20px;
+    }
+    .logo-wrapper {
+        width: 90px;
+        height: 90px;
+    }
+    .system-title {
+        font-size: 19px;
+    }
+}
+</style>
+</head>
+<body>
+
+    <!-- 1. หน้า Login -->
+   <!-- ========================================== -->
+<!--  หน้าเข้าสู่ระบบ (Premium Login Section)   -->
+<!-- ========================================== -->
+<div id="loginSection" class="login-wrapper">
+    <div class="login-card">
+        
+        <!-- ส่วนหัวแสดงโลโก้และชื่อระบบ -->
+        <div class="login-header">
+            <div class="logo-wrapper">
+                <img src="https://chaiyadej.anubansurat.ac.th/suppalak/img/MuangST2020.jpg" alt="โรงเรียนเมืองสุราษฎร์ธานี" class="school-logo">
+            </div>
+            <h2 class="system-title">ระบบบริหารจัดการข้อมูลนักเรียน</h2>
+            <p class="system-subtitle">Student Management System</p>
+        </div>
+
+        <!-- ฟอร์มเข้าสู่ระบบ (คง ID เดิมไว้ทั้งหมด) -->
+        <form class="login-form" onsubmit="return false;">
+            <div class="input-group">
+                <label for="email">📧 อีเมลผู้ใช้งาน</label>
+                <div class="input-field-wrapper">
+                    <input type="email" id="email" placeholder="example@mst.ac.th" required autocomplete="username">
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label for="password">🔒 รหัสผ่าน</label>
+                <div class="input-field-wrapper">
+                    <input type="password" id="password" placeholder="••••••••" required autocomplete="current-password">
+                </div>
+            </div>
+
+            <!-- กล่องแสดงข้อความ Error -->
+            <div id="loginError" class="login-error-msg" style="display: none;"></div>
+
+            <!-- ปุ่มเข้าสู่ระบบ -->
+            <button type="button" id="loginBtn" class="btn-login-premium">
+                <span>เข้าสู่ระบบ</span>
+                <span class="btn-arrow">➔</span>
+            </button>
+        </form>
+
+        <!-- ส่วนท้ายการ์ด -->
+        <div class="login-footer">
+            <p>© โรงเรียนเมืองสุราษฎร์ธานี | ระบบสารสนเทศนักเรียน</p>
+        </div>
+    </div>
+</div>
+
+    <!-- 2. แอปหลัก (SPA) -->
+    <div id="appSection">
+        
+    
+        <!-- แถบเมนูด้านข้าง (Sidebar) -->
+<nav id="sidebar">
+    <div class="sidebar-brand" style="display: flex; align-items: center; justify-content: center; gap: 10px; padding: 15px 20px;">
+    <img src="https://chaiyadej.anubansurat.ac.th/suppalak/img/MuangST2020.jpg" alt="โลโก้โรงเรียน" style="width: 36px; height: 36px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));">
+    <span style="font-weight: 700; letter-spacing: 0.5px;">SMART SCHOOL</span>
+</div>
+    <ul class="sidebar-menu" id="mainMenu">
+        <li id="menu-dashboard" onclick="switchView('dashboardView', this)">📊 แดชบอร์ดสรุปผล</li>
+        <li id="menu-students" onclick="switchView('studentManageView', this)" class="active">🎓 ข้อมูลนักเรียน</li>
+        <li id="menu-inactive-students" onclick="switchView('inactiveStudentsView', this)">⚠️ นักเรียนไม่มีตัว</li>
+        <li id="menu-staffs" onclick="switchView('staffManageView', this)">👥 จัดการบุคลากร</li>
+        
+    </ul>
+</nav>
+
+        <!-- พื้นที่แสดงข้อมูลด้านขวา -->
+        <main id="mainContent">
+            <!-- แถบด้านบน -->
+            <header>
+                <div class="header-left">
+                    <button id="mobileMenuBtn">☰</button>
+                    <span id="currentUserDisplay" class="user-info">กำลังโหลด...</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <!-- สวิตช์เปิด/ปิดระบบ (แสดงเฉพาะ Admin) -->
+                    <div id="systemControlGroup" class="admin-only" style="display: none; align-items: center; gap: 8px; background: #f8f9fa; padding: 5px 12px; border-radius: 20px; border: 1px solid #ddd;">
+                        <span style="font-size: 13px; font-weight: 600;">สถานะระบบ:</span>
+                        <button id="systemToggleBtn" onclick="toggleSystemState()" style="padding: 4px 10px; border-radius: 12px; border: none; font-size: 12px; font-weight: bold; cursor: pointer;">กำลังโหลด...</button>
+                    </div>
+                    <button id="logoutBtn" class="btn-logout">ออกจากระบบ</button>
+                </div>
+            </header>
+
+            <!-- พื้นที่เนื้อหาแต่ละหน้า -->
+            <div class="content-body">
+                
+              <!-- หน้า 1: แดชบอร์ดสรุปผลภาพรวม -->
+<div id="dashboardView" class="view-section" style="display: none; padding: 20px;">
+  
+  <!-- หัวข้อและแถบตัวกรอง -->
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h2>📊 แดชบอร์ดภาพรวมสถานศึกษา</h2>
+    
+    <div style="display: flex; gap: 10px;">
+      <select id="dashGradeFilter" onchange="loadExecutiveDashboard()" style="padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+        <option value="all">-- ทุกระดับชั้น (ม.1 - ม.6) --</option>
+        <option value="ม.1">มัธยมศึกษาปีที่ 1</option>
+        <option value="ม.2">มัธยมศึกษาปีที่ 2</option>
+        <option value="ม.3">มัธยมศึกษาปีที่ 3</option>
+        <option value="ม.4">มัธยมศึกษาปีที่ 4</option>
+        <option value="ม.5">มัธยมศึกษาปีที่ 5</option>
+        <option value="ม.6">มัธยมศึกษาปีที่ 6</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- 1. การ์ดสรุปภาพรวม (KPI Cards) -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 25px;">
+    
+    <div class="kpi-card" style="background: #e3f2fd; padding: 20px; border-radius: 10px; border-left: 5px solid #2196f3;">
+      <span style="color: #555; font-size: 14px; font-weight: bold;">นักเรียนทั้งหมด</span>
+      <h1 id="kpiTotalStudents" style="margin: 10px 0 0 0; color: #0d47a1;">0</h1>
+      <small style="color: #666;">คน (ทุกสถานะ)</small>
+    </div>
+
+    <div class="kpi-card" style="background: #e8f5e9; padding: 20px; border-radius: 10px; border-left: 5px solid #4caf50;">
+      <span style="color: #555; font-size: 14px; font-weight: bold;">นักเรียนชาย / หญิง</span>
+      <h2 id="kpiGenderRatio" style="margin: 10px 0 0 0; color: #1b5e20;">👨 0 | 👩 0</h2>
+      <small id="kpiGenderPercent" style="color: #666;">(0% / 0%)</small>
+    </div>
+
+    <div class="kpi-card" style="background: #fff3e0; padding: 20px; border-radius: 10px; border-left: 5px solid #ff9800;">
+      <span style="color: #555; font-size: 14px; font-weight: bold;">สถานะปกติ (กำลังศึกษา)</span>
+      <h1 id="kpiActiveStudents" style="margin: 10px 0 0 0; color: #e65100;">0</h1>
+      <small style="color: #666;">คน</small>
+    </div>
+
+    <div class="kpi-card" style="background: #ffebee; padding: 20px; border-radius: 10px; border-left: 5px solid #f44336;">
+  <span style="color: #555; font-size: 14px; font-weight: bold;">สถานะอื่นๆ</span>
+  <h1 id="kpiOtherStatusStudents" style="margin: 8px 0 5px 0; color: #b71c1c;">
+    0 <span style="font-size: 14px; font-weight: normal; color: #666;">คน</span>
+  </h1>
+  
+  <!-- รายการย่อยแสดงสถานะแต่ละประเภท -->
+  <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed #ef9a9a; font-size: 12px; color: #444; display: flex; flex-direction: column; gap: 4px;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <span>• ขาดเรียนติดต่อกันนาน:</span>
+      <b id="countAbsence" style="color: #c62828;">0 คน</b>
+    </div>
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <span>• ย้ายสถานศึกษา:</span>
+      <b id="countTransfer" style="color: #d84315;">0 คน</b>
+    </div>
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <span>• พักการเรียน:</span>
+      <b id="countSuspend" style="color: #f57f17;">0 คน</b>
+    </div>
+  </div>
+</div>
+
+  </div>
+
+  
+
+  <!-- 2. ตารางสรุปย่อย (แสดงสลับระหว่าง "รายชั้น" กับ "รายห้อง") -->
+<!-- 1. ตารางสรุปแยกตามระดับชั้น (แสดงเมื่อเลือก "ทุกระดับชั้น") -->
+<!-- 1. ตารางสรุปแยกตามระดับชั้น -->
+<div id="dashGradeSummarySection">
+    <h3 style="color: var(--primary-purple); font-size: 16px; font-weight: 700; margin-bottom: 12px;">🏫 สรุปจำนวนนักเรียนแยกตามระดับชั้น</h3>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th style="text-align: center;">ระดับชั้น</th>
+                    <th style="text-align: center;">จำนวนห้อง</th>
+                    <th style="text-align: center;">ชาย (คน)</th>
+                    <th style="text-align: center;">หญิง (คน)</th>
+                    <th style="text-align: center; color: #fca5a5;">⚠️ ไม่มีตัว</th>
+                    <th style="text-align: center; color: #86efac;">✅ มีตัวจริง</th>
+                    <!-- 🔥 แก้ไขจุดนี้: เอา background: #f8fafc; ออกเพื่อให้เป็นสีม่วงเหมือนช่องอื่น -->
+                    <th style="text-align: center;">รวมทั้งหมด</th>
+                </tr>
+            </thead>
+            <tbody id="dashGradeSummaryBody">
+                <!-- Javascript เติมข้อมูล -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- 2. ตารางสรุปแยกตามห้องเรียน -->
+<div id="dashRoomSummarySection" style="display: none;">
+    <h3 id="dashRoomSummaryTitle" style="color: var(--primary-purple); font-size: 16px; font-weight: 700; margin-bottom: 12px;">🏫 สรุปจำนวนนักเรียนแยกตามห้องเรียน</h3>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th style="text-align: center;">ห้องเรียน</th>
+                    <th style="text-align: center;">ชาย (คน)</th>
+                    <th style="text-align: center;">หญิง (คน)</th>
+                    <th style="text-align: center; color: #fca5a5;">⚠️ ไม่มีตัว</th>
+                    <th style="text-align: center; color: #86efac;">✅ มีตัวจริง</th>
+                    <!-- 🔥 แก้ไขจุดนี้: เอา background: #f8fafc; ออก -->
+                    <th style="text-align: center;">รวมทั้งหมด</th>
+                    <th>ครูประจำชั้น</th>
+                </tr>
+            </thead>
+            <tbody id="dashRoomSummaryBody">
+                <!-- Javascript เติมข้อมูล -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+  <!-- 3. สรุปและแสดงสถานะการยืนยันข้อมูลครูประจำชั้น (60 ห้อง) -->
+ <!-- การ์ดสรุปสถานะการยืนยันข้อมูลครูประจำชั้น -->
+<div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 25px;">
+    
+    <!-- ส่วนหัวการ์ดและป้ายสรุปยอด -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+        <h3 style="color: var(--primary-purple); font-size: 16px; font-weight: 700; margin: 0;">
+            📌 สถานะการยืนยันข้อมูลของครูประจำชั้น (<span id="dashTeacherTotalRoomsText">60 ห้องเรียน</span>)
+        </h3>
+        <div style="display: flex; gap: 8px;">
+            <span style="padding: 4px 12px; background: #dcfce7; color: #15803d; border-radius: 20px; font-size: 13px; font-weight: 700; border: 1px solid #86efac;">
+                ✅ ยืนยันแล้ว: <span id="dashConfirmedCount">0</span> ห้อง
+            </span>
+            <span style="padding: 4px 12px; background: #ffe4e6; color: #be123c; border-radius: 20px; font-size: 13px; font-weight: 700; border: 1px solid #fca5a5;">
+                ⏳ ยังไม่ยืนยัน: <span id="dashUnconfirmedCount">0</span> ห้อง
+            </span>
+        </div>
+    </div>
+
+    <hr style="border: 0; border-top: 1px solid #f1f5f9; margin-bottom: 15px;">
+
+    <!-- 🔥 พื้นที่แสดงป้ายสถานะรายห้อง (Grid View) -->
+    <div id="dashTeacherConfirmationGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px;">
+        <!-- JavaScript จะวาดสถานะรายห้องตรงนี้ -->
+    </div>
+
+</div>
+
+</div>
+
+                <!-- หน้า 2: จัดการข้อมูลนักเรียน -->
+                <div id="studentManageView" class="view-section active-view">
+                    <!-- 1. แถบแจ้งเตือนเมื่อระบบปิด -->
+                    <div id="systemClosedBanner" class="system-closed-banner" style="display: none;">
+                        🔒 <b>ระบบปิดรับการแก้ไขข้อมูล:</b> ขณะนี้ระบบปิดการบันทึกข้อมูลแล้ว คุณสามารถดูข้อมูลได้ตามสิทธิ์เท่านั้น
+                    </div>
+
+                    <!-- 2. หัวข้อหน้าเว็บ และ กลุ่มปุ่มดำเนินการ -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+                        <h2 style="margin: 0;">จัดการข้อมูลนักเรียน</h2>
+                        
+                        <div id="actionButtonsGroup" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                            <button id="deleteSelectedBtn" class="admin-only" style="padding: 8px 15px; background: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer; display: none;">
+                                🗑️ ลบรายการที่เลือก (<span id="selectedCount">0</span>)
+                            </button>
+                            <button id="addStudentBtn" onclick="openAddModal()" class="admin-only" style="padding: 8px 15px; background: var(--primary-purple); color: white; border: none; border-radius: 5px; cursor: pointer; display: none;">
+                                ➕ เพิ่มนักเรียน
+                            </button>
+                            <button id="showImportBtn" class="admin-only" style="padding: 8px 15px; background: #17a2b8; color: white; border: none; border-radius: 5px; cursor: pointer; display: none;">
+                                📤 นำเข้า (Paste จาก Excel)
+                            </button>
+                            <button id="exportExcelBtn" style="padding: 8px 15px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                                📥 ส่งออก Excel
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 3. กล่องยืนยันข้อมูลประจำห้องเรียน -->
+                    <div id="confirmCard" style="display: none; align-items: center; justify-content: space-between; padding: 12px 18px; background: #f0f4ff; border: 1px solid #c7d2fe; border-radius: 8px; margin-bottom: 20px;">
+                        <div>
+                            <strong style="color: var(--primary-purple); font-size: 15px;">✅ การยืนยันความถูกต้องข้อมูลประจำห้องเรียน</strong>
+                            <p id="confirmText" style="font-size: 13px; color: #555; margin-top: 2px;">กรุณาตรวจสอบรายชื่อนักเรียนในที่ปรึกษาให้ถูกต้องก่อนกดเปิดสวิตช์ยืนยัน</p>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span id="confirmBadge" style="font-size: 13px; font-weight: 600;"></span>
+                            <label class="switch">
+                                <input type="checkbox" id="classroomConfirmToggle" onchange="handleClassroomConfirmChange(this)">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 4. ฟอร์มวางข้อมูลจาก Excel -->
+                    <div id="importSection" style="display: none; margin-bottom: 20px; padding: 15px; background: #fff; border: 1px solid #17a2b8; border-radius: 5px;">
+                        <h4 style="color: #17a2b8; margin-bottom: 5px;">วางข้อมูลจาก Excel ลงในช่องด้านล่าง</h4>
+                        <p style="font-size: 0.9em; color: #666; margin-bottom: 10px;">
+                            <b>ลำดับคอลัมน์ใน Excel ต้องเป็น:</b> รหัสนักเรียน | คำนำหน้า | ชื่อ | นามสกุล | ชั้น (เช่น ม.1) | ห้อง (เช่น 1) | เพศ (ชาย/หญิง)
+                        </p>
+                        <textarea id="importDataText" rows="5" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;" placeholder="คลิกที่นี่ แล้วกด Ctrl+V เพื่อวางข้อมูล..."></textarea>
+                        <div style="margin-top: 10px;">
+                            <button id="processImportBtn" style="padding: 8px 15px; background: var(--primary-purple); color: white; border: none; border-radius: 5px; cursor: pointer;">บันทึกเข้าระบบ</button>
+                            <button id="cancelImportBtn" style="padding: 8px 15px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer; margin-left: 5px;">ยกเลิก</button>
+                        </div>
+                        <div id="importStatus" style="margin-top: 10px; font-size: 0.9em; font-weight: bold;"></div>
+                    </div>
+
+                    <!-- 5. ตัวกรอง ค้นหา -->
+                    <div id="filterSection" style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 5px; border: 1px solid #eee; display: flex; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <label for="gradeFilter">ระดับชั้น:</label>
+                            <select id="gradeFilter" style="padding: 5px; border-radius: 3px;">
+                                <option value="">-- ทุกชั้น --</option>
+                                <option value="ม.1">ม.1</option><option value="ม.2">ม.2</option><option value="ม.3">ม.3</option>
+                                <option value="ม.4">ม.4</option><option value="ม.5">ม.5</option><option value="ม.6">ม.6</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="roomFilter">ห้อง:</label>
+                            <select id="roomFilter" style="padding: 5px; border-radius: 3px;">
+                                <option value="">-- ทุกห้อง --</option>
+                                <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+                                <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+                                <option value="7">7</option><option value="8">8</option><option value="9">9</option>
+                                <option value="10">10</option>
+                            </select>
+                        </div>
+
+                        <button id="searchBtn" style="padding: 6px 15px; background: var(--primary-purple); color: white; border: none; border-radius: 3px; cursor: pointer;">ค้นหา</button>
+
+                        <!-- Dropdown ตัวเลือกการเรียงลำดับข้อมูลนักเรียน -->
+<div style="display: inline-block; margin-left: 10px;">
+    <label for="sortBySelect" style="font-size: 14px; font-weight: 600; color: #475569; margin-right: 5px;">เรียงลำดับ:</label>
+    <select id="sortBySelect" onchange="applySortingAndRender()" style="padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 14px; background: white; cursor: pointer;">
+        <option value="gender_code" selected>👦👧 เพศ (ชาย → หญิง) ➔ รหัส (น้อย → มาก)</option>
+        <option value="code_asc">🔢 รหัสนักเรียน (น้อย → มาก)</option>
+        <option value="code_desc">🔢 รหัสนักเรียน (มาก → น้อย)</option>
+        <option value="name_asc">🔤 ชื่อ-นามสกุล (ก → ฮ)</option>
+    </select>
+</div>
+                        <div style="margin-left: auto; display: flex; align-items: center; gap: 5px;">
+                            <label for="pageSizeSelect" style="font-size: 13px; color: #555;">แสดงหน้าละ:</label>
+                            <select id="pageSizeSelect" class="page-size-select" onchange="handlePageSizeChange(this.value)">
+                                <option value="10">10 คน</option>
+                                <option value="40" selected>40 คน</option>
+                                <option value="100">100 คน</option>
+                                <option value="all">ทั้งหมด</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- 6. การ์ดสรุปยอด -->
+                    <div id="summarySection"></div>
+
+                    <!-- 7. ตารางแสดงผลข้อมูล -->
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th class="admin-only-col" style="width: 40px; text-align: center;">
+                                        <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)" style="cursor: pointer;">
+                                    </th>
+                                    <th style="width: 60px; text-align: center;">ลำดับ</th>
+                                    <th>รหัส</th>
+                                    <th>ชั้น/ห้อง</th>
+                                    <th>ชื่อ-นามสกุล</th>
+                                    <th>เพศ</th>
+                                    <th>อัปเดตสถานะ</th>
+                                    <th>จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="studentListBody"></tbody>
+                        </table>
+                    </div>
+
+                    <!-- แถบควบคุมการเปลี่ยนหน้า -->
+                    <div class="pagination-container" id="paginationContainer">
+                        <div id="paginationInfo" style="font-size: 13px; color: #666;"></div>
+                        <div class="pagination-controls" id="paginationControls"></div>
+                    </div>
+                </div>
+
+<!-- ========================================== -->
+<!-- หน้า 3: รายงานนักเรียนไม่มีตัว / สถานะอื่นๆ -->
+<!-- ========================================== -->
+<div id="inactiveStudentsView" class="view-section">
+    
+    <!-- หัวข้อหน้า -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+    <div>
+        <h2 style="color: var(--primary-purple); font-weight: 700;">⚠️ รายงานนักเรียนไม่มีตัว / สถานะอื่นๆ</h2>
+        <p style="color: #64748b; font-size: 14px; margin-top: 4px;">สรุปรายชื่อนักเรียนที่มีสถานะ ขาดเรียนนาน, ย้ายสถานศึกษา และพักการเรียน</p>
+    </div>
+
+    <!-- 🔥 ครอบปุ่มให้อยู่ในกลุ่มเดียวกัน เพื่อให้วางชิดติดกันทางขวา -->
+    <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+        <button onclick="exportInactiveStudentsCSV()" style="padding: 8px 16px; background: #16a34a; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; transition: background 0.2s;">
+            📥 ส่งออก CSV (Excel)
+        </button>
+        <button onclick="loadInactiveStudentsView()" style="padding: 8px 16px; background: var(--primary-purple); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600;">
+            🔄 อัปเดตข้อมูล
+        </button>
+    </div>
+</div>
+
+    <!-- 1. การ์ดสรุป KPI ภาพรวมสถานะอื่นๆ -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;">
+        
+        <div class="kpi-card" style="background: #fef2f2; padding: 18px; border-radius: 12px; border-left: 5px solid #dc2626; box-shadow: 0 2px 8px rgba(220,38,38,0.06);">
+            <span style="color: #9f1239; font-size: 13px; font-weight: 700;">🚨 รวมนักเรียนไม่มีตัวทั้งหมด</span>
+            <h1 id="inactiveKpiTotal" style="margin: 8px 0 0 0; color: #9f1239; font-size: 30px;">0</h1>
+            <small style="color: #be123c;">คน</small>
+        </div>
+
+        <div class="kpi-card" style="background: #fff1f2; padding: 18px; border-radius: 12px; border-left: 5px solid #be123c; box-shadow: 0 2px 8px rgba(190,18,60,0.06);">
+            <span style="color: #9f1239; font-size: 13px; font-weight: 700;">❌ ขาดเรียนติดต่อกันนาน</span>
+            <h1 id="inactiveKpiAbsence" style="margin: 8px 0 0 0; color: #be123c; font-size: 30px;">0</h1>
+            <small style="color: #be123c;">คน</small>
+        </div>
+
+        <div class="kpi-card" style="background: #fff7ed; padding: 18px; border-radius: 12px; border-left: 5px solid #c2410c; box-shadow: 0 2px 8px rgba(194,65,12,0.06);">
+            <span style="color: #9a3412; font-size: 13px; font-weight: 700;">🏫 ย้ายสถานศึกษา</span>
+            <h1 id="inactiveKpiTransfer" style="margin: 8px 0 0 0; color: #c2410c; font-size: 30px;">0</h1>
+            <small style="color: #c2410c;">คน</small>
+        </div>
+
+        <div class="kpi-card" style="background: #fffbeb; padding: 18px; border-radius: 12px; border-left: 5px solid var(--yellow-gold); box-shadow: 0 2px 8px rgba(245,158,11,0.06);">
+            <span style="color: #b45309; font-size: 13px; font-weight: 700;">⏸️ พักการเรียน</span>
+            <h1 id="inactiveKpiSuspend" style="margin: 8px 0 0 0; color: #d97706; font-size: 30px;">0</h1>
+            <small style="color: #b45309;">คน</small>
+        </div>
+
+    </div>
+
+    <!-- 2. แถบตัวกรอง (Filter & Sort Section) -->
+    <div style="background: #f8fafc; padding: 16px; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+        
+        <!-- กรองระดับชั้น -->
+        <div>
+            <label style="font-size: 13px; font-weight: 600; color: #475569; display: block; margin-bottom: 4px;">ระดับชั้น:</label>
+            <select id="inactiveGradeFilter" onchange="filterAndRenderInactiveView()" style="padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 14px; background: white;">
+                <option value="all">-- ทุกระดับชั้น (ม.1 - ม.6) --</option>
+                <option value="ม.1">มัธยมศึกษาปีที่ 1</option>
+                <option value="ม.2">มัธยมศึกษาปีที่ 2</option>
+                <option value="ม.3">มัธยมศึกษาปีที่ 3</option>
+                <option value="ม.4">มัธยมศึกษาปีที่ 4</option>
+                <option value="ม.5">มัธยมศึกษาปีที่ 5</option>
+                <option value="ม.6">มัธยมศึกษาปีที่ 6</option>
+            </select>
+        </div>
+
+        <!-- กรองสถานะ -->
+        <div>
+            <label style="font-size: 13px; font-weight: 600; color: #475569; display: block; margin-bottom: 4px;">ประเภทสถานะ:</label>
+            <select id="inactiveStatusFilter" onchange="filterAndRenderInactiveView()" style="padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 14px; background: white;">
+                <option value="all">-- ทุกประเภทสถานะ --</option>
+                <option value="ขาดเรียน">ขาดเรียนติดต่อกันนาน</option>
+                <option value="ย้าย">ย้ายสถานศึกษา</option>
+                <option value="พักการเรียน">พักการเรียน</option>
+            </select>
+        </div>
+
+        <!-- ตัวเลือกจัดเรียง -->
+        <div>
+            <label style="font-size: 13px; font-weight: 600; color: #475569; display: block; margin-bottom: 4px;">การจัดเรียง:</label>
+            <select id="inactiveSortBy" onchange="filterAndRenderInactiveView()" style="padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 14px; background: white;">
+                <option value="status">📌 เรียงตามประเภทสถานะ</option>
+                <option value="grade_room">🏫 เรียงตาม ชั้น/ห้อง</option>
+                <option value="gender_code">👦👧 เพศ (ชาย → หญิง) ➔ รหัส</option>
+                <option value="code_asc">🔢 รหัสนักเรียน (น้อย → มาก)</option>
+            </select>
+        </div>
+
+    </div>
+
+    <!-- 3. ตารางสรุปจำนวนแยกตามระดับชั้นและประเภทสถานะ -->
+    <div style="margin-bottom: 25px;">
+        <h3 style="color: var(--primary-purple); font-size: 16px; font-weight: 700; margin-bottom: 10px;">📊 สรุปจำนวนนักเรียนไม่มีตัวแยกตามระดับชั้น</h3>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th style="text-align: center;">ระดับชั้น</th>
+                        <th style="text-align: center;">ขาดเรียนนาน (คน)</th>
+                        <th style="text-align: center;">ย้ายสถานศึกษา (คน)</th>
+                        <th style="text-align: center;">พักการเรียน (คน)</th>
+                        <th style="text-align: center;">รวมทั้งหมด (คน)</th>
+                    </tr>
+                </thead>
+                <tbody id="inactiveGradeSummaryBody">
+                    <!-- Javascript เติมข้อมูลสรุปตรงนี้ -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 4. ตาราง/การ์ด รายชื่อนักเรียนไม่มีตัวรายบุคคล -->
+    <div>
+        <h3 style="color: var(--primary-purple); font-size: 16px; font-weight: 700; margin-bottom: 10px;">📋 รายชื่อนักเรียนไม่มีตัวรายบุคคล</h3>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th style="text-align: center;">ลำดับ</th>
+                        <th>รหัสนักเรียน</th>
+                        <th>ระดับชั้น/ห้อง</th>
+                        <th>ชื่อ-นามสกุล</th>
+                        <th>เพศ</th>
+                        <th>สถานะปัจจุบัน</th>
+                        <th style="text-align: center;">อัปเดตสถานะ</th>
+                    </tr>
+                </thead>
+                <tbody id="inactiveStudentListBody">
+                    <!-- Javascript เติมรายชื่อนักเรียนตรงนี้ -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+
+                <!-- หน้า 4: จัดการบุคลากร (ย้ายเข้ามาใน content-body เรียบร้อย) -->
+                <div id="staffManageView" class="view-section" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2>จัดการข้อมูลบุคลากร</h2>
+                        <div id="staffAdminActions" class="admin-only">
+    <!-- ปุ่มเพิ่มห้องเรียน (แสดงเมื่ออยู่แท็บครูประจำชั้น) -->
+    <button id="addRoomBtn" onclick="openAddRoomModal()" style="padding: 8px 15px; background: var(--primary-purple); color: white; border: none; border-radius: 5px; cursor: pointer; display: inline-block;">
+        ➕ เพิ่มห้องเรียน
+    </button>
+    
+    <!-- ปุ่มเพิ่มผู้บริหาร/ทะเบียน (แสดงเมื่ออยู่แท็บผู้บริหาร & ทะเบียน) -->
+    <button id="addStaffBtn" onclick="openAddStaffModal()" style="padding: 8px 15px; background: var(--primary-purple); color: white; border: none; border-radius: 5px; cursor: pointer; display: none;">
+        ➕ เพิ่มผู้บริหาร / ทะเบียน
+    </button>
+    <button onclick="bulkCreateClassrooms()" style="padding: 8px 15px; background: #17a2b8; color: white; border: none; border-radius: 5px; cursor: pointer; margin-left: 5px;">
+    ⚡ สร้าง 60 ห้องเรียนอัตโนมัติ
+</button>
+</div>
+                    </div>
+
+                    <!-- แถบสลับแท็บ -->
+                    <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee;">
+                        <button id="tabClassroomTeachers" onclick="switchStaffTab('teachers')" style="padding: 10px 20px; background: none; border: none; border-bottom: 3px solid var(--primary-purple); font-weight: bold; cursor: pointer; color: var(--primary-purple); font-size: 15px;">
+                            🏫 ครูประจำชั้น (แยกตามห้อง)
+                        </button>
+                        <button id="tabOtherStaff" onclick="switchStaffTab('other')" style="padding: 10px 20px; background: none; border: none; font-weight: bold; cursor: pointer; color: #666; font-size: 15px;">
+                            👔 ผู้บริหาร & เจ้าหน้าที่ทะเบียน
+                        </button>
+                    </div>
+
+                    <!-- แท็บ 1: ตารางครูประจำชั้น -->
+                    <div id="sectionClassroomTeachers">
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 90px; text-align: center;">ชั้น/ห้อง</th>
+                                        <th style="width: 250px;">อีเมลเข้าใช้งาน (1 บัญชี/ห้อง)</th>
+                                        <th>รายชื่อครูประจำชั้น (ประจำห้องเรียน)</th>
+                                        <th class="admin-only-col" style="width: 100px; text-align: center;">จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="classroomTeacherListBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- แท็บ 2: ตารางผู้บริหาร & ทะเบียน -->
+                    <div id="sectionOtherStaff" style="display: none;">
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 150px;">ตำแหน่ง</th>
+                                        <th>ชื่อ-นามสกุล</th>
+                                        <th>อีเมล</th>
+                                        <th>เบอร์โทรศัพท์</th>
+                                        <th class="admin-only-col" style="width: 100px; text-align: center;">จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="otherStaffListBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            <!-- Footer ท้ายหน้าเว็บ -->
+            <footer class="app-footer">
+              <p><b>ระบบตรวจสอบและจัดการข้อมูลนักเรียน (SMART SCHOOL)</b></p>
+              <small>ผู้จัดทำ/ดูแลระบบ: งานทะเบียนนักเรียน โดย ศุภลักษณ์ บุญสอน</small>
+              <small>โรงเรียนเมืองสุราษฎร์ธานี | สำนักงานเขตพื้นที่การศึกษามัธยมศึกษาสุราษฎร์ธานี ชุมพร</small>
+            </footer>
+
+        </div> <!-- ปิด .content-body -->
+    </main>
+</div> <!-- ปิด #appSection -->
+
+    <!-- Background Overlay สำหรับมือถือตอนเปิด Sidebar -->
+    <div id="sidebarOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999;"></div>
+
+    <!-- ========================================== -->
+    <!-- รวมกลุ่ม Modal Form ไว้ส่วนล่างสุดของ body -->
+    <!-- ========================================== -->
+
+    <!-- Modal 1: แก้ไขข้อมูลนักเรียน -->
+    <div id="editModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>แก้ไขข้อมูลนักเรียน</h3>
+            <input type="hidden" id="edit-id">
+            <div class="form-grid">
+                <div class="form-group"><label>รหัสนักเรียน</label><input type="text" id="edit-code"></div>
+                <div class="form-group"><label>คำนำหน้า</label><input type="text" id="edit-prefix"></div>
+                <div class="form-group"><label>ชื่อ</label><input type="text" id="edit-fname"></div>
+                <div class="form-group"><label>นามสกุล</label><input type="text" id="edit-lname"></div>
+                <div class="form-group"><label>ระดับชั้น</label><input type="text" id="edit-grade"></div>
+                <div class="form-group"><label>ห้อง</label><input type="text" id="edit-room"></div>
+                <div class="form-group full-width">
+                    <label>เพศ</label>
+                    <select id="edit-gender">
+                        <option value="ชาย">ชาย</option>
+                        <option value="หญิง">หญิง</option>
+                    </select>
+                </div>
+            </div>
+            <div id="editError" style="color: red; margin-bottom: 10px; font-size: 14px; display: none;"></div>
+            <div class="modal-actions">
+                <button onclick="closeEditModal()" style="padding: 10px 15px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer;">ยกเลิก</button>
+                <button onclick="saveEditStudent()" style="padding: 10px 15px; background: var(--primary-purple); color: white; border: none; border-radius: 5px; cursor: pointer;">บันทึกข้อมูล</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 2: เพิ่มข้อมูลนักเรียนใหม่ -->
+    <div id="addModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>➕ เพิ่มข้อมูลนักเรียนใหม่</h3>
+            <div class="form-grid">
+                <div class="form-group"><label>รหัสนักเรียน *</label><input type="text" id="add-code" placeholder="เช่น 31071"></div>
+                <div class="form-group"><label>คำนำหน้า</label><input type="text" id="add-prefix" placeholder="ด.ช. / ด.ญ. / นาย / นางสาว"></div>
+                <div class="form-group"><label>ชื่อ *</label><input type="text" id="add-fname"></div>
+                <div class="form-group"><label>นามสกุล *</label><input type="text" id="add-lname"></div>
+                <div class="form-group">
+                    <label>ระดับชั้น *</label>
+                    <select id="add-grade">
+                        <option value="ม.1">ม.1</option><option value="ม.2">ม.2</option><option value="ม.3">ม.3</option>
+                        <option value="ม.4">ม.4</option><option value="ม.5">ม.5</option><option value="ม.6">ม.6</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>ห้อง *</label><input type="text" id="add-room" placeholder="เช่น 1"></div>
+                <div class="form-group full-width">
+                    <label>เพศ *</label>
+                    <select id="add-gender">
+                        <option value="ชาย">ชาย</option>
+                        <option value="หญิง">หญิง</option>
+                    </select>
+                </div>
+            </div>
+            <div id="addError" style="color: red; margin-bottom: 10px; font-size: 14px; display: none;"></div>
+            <div class="modal-actions">
+                <button onclick="closeAddModal()" style="padding: 10px 15px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer;">ยกเลิก</button>
+                <button onclick="saveAddStudent()" style="padding: 10px 15px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer;">บันทึกข้อมูล</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 3: แก้ไขครูประจำชั้นประจำห้อง -->
+    <div id="editTeacherModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 500px;">
+            <h3 id="modalTeacherTitle">✏️ จัดการครูประจำชั้น</h3>
+            <input type="hidden" id="editTeacherRoomId">
+            
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label>อีเมลล็อกอินของห้องเรียน</label>
+                <input type="email" id="editTeacherEmail" placeholder="เช่น teacher_m1_1@school.ac.th" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+            </div>
+
+            <div class="form-group">
+                <label>รายชื่อครูประจำชั้น (สามารถเพิ่มได้หลายคน)</label>
+                <div id="teacherInputsContainer" style="display: flex; flex-direction: column; gap: 8px; margin-top: 5px;"></div>
+                <button type="button" onclick="addTeacherInputField('')" style="margin-top: 10px; padding: 6px 12px; background: #e9ecef; border: 1px solid #ced4da; border-radius: 4px; cursor: pointer; font-size: 13px;">
+                    ➕ เพิ่มรายชื่อครูประจำชั้นอีก 1 คน
+                </button>
+            </div>
+
+            <div class="modal-actions" style="margin-top: 20px; text-align: right;">
+                <button onclick="closeEditTeacherModal()" style="padding: 8px 15px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer;">ยกเลิก</button>
+                <button onclick="saveClassroomTeacher()" style="padding: 8px 15px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; margin-left: 5px;">บันทึกข้อมูล</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 4: เพิ่มผู้บริหาร / เจ้าหน้าที่ทะเบียน -->
+    <!-- Modal 4: เพิ่มผู้บริหาร / เจ้าหน้าที่ทะเบียน (อัปเดตรองรับรหัสผ่าน) -->
+<div id="addStaffModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 450px;">
+        <h3>➕ เพิ่มผู้บริหาร / เจ้าหน้าที่ทะเบียน</h3>
+        <div class="form-group" style="margin-bottom: 12px;">
+            <label>ชื่อ-นามสกุล *</label>
+            <input type="text" id="staff-name" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+        </div>
+        <div class="form-group" style="margin-bottom: 12px;">
+            <label>ตำแหน่ง *</label>
+            <select id="staff-role" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                <option value="executive">ผู้บริหาร (Executive)</option>
+                <option value="registrar">เจ้าหน้าที่ทะเบียน (Registrar)</option>
+            </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 12px;">
+            <label>อีเมลเข้าใช้งาน *</label>
+            <input type="email" id="staff-email" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+        </div>
+        <div class="form-group" style="margin-bottom: 12px;">
+            <label>รหัสผ่านล็อกอิน *</label>
+            <input type="password" id="staff-password" placeholder="ตั้งรหัสผ่านอย่างน้อย 6 ตัวอักษร" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+        </div>
+        <div class="form-group" style="margin-bottom: 15px;">
+            <label>เบอร์โทรศัพท์</label>
+            <input type="text" id="staff-phone" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+        </div>
+        <div id="staffError" style="color: red; margin-bottom: 10px; font-size: 13px; display: none;"></div>
+        <div class="modal-actions" style="text-align: right;">
+            <button onclick="closeAddStaffModal()" style="padding: 8px 15px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer;">ยกเลิก</button>
+            <button onclick="saveStaffMember()" style="padding: 8px 15px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; margin-left: 5px;">บันทึก</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 5: เพิ่มห้องเรียนใหม่ (เพิ่มใหม่) -->
+<div id="addRoomModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 450px;">
+        <h3>➕ เพิ่มห้องเรียนใหม่</h3>
+        <div class="form-grid" style="margin-bottom: 12px;">
+            <div class="form-group">
+                <label>ระดับชั้น *</label>
+                <select id="new-room-grade" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                    <option value="ม.1">ม.1</option><option value="ม.2">ม.2</option><option value="ม.3">ม.3</option>
+                    <option value="ม.4">ม.4</option><option value="ม.5">ม.5</option><option value="ม.6">ม.6</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>ห้อง *</label>
+                <input type="text" id="new-room-number" placeholder="เช่น 7" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+            </div>
+        </div>
+        <div class="form-group" style="margin-bottom: 12px;">
+            <label>อีเมลเข้าใช้งานของห้อง *</label>
+            <input type="email" id="new-room-email" placeholder="เช่น teacher_m1_7@school.ac.th" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+        </div>
+        <div class="form-group" style="margin-bottom: 15px;">
+            <label>รหัสผ่านล็อกอิน *</label>
+            <input type="password" id="new-room-password" placeholder="ตั้งรหัสผ่านอย่างน้อย 6 ตัวอักษร" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+        </div>
+        <div id="addRoomError" style="color: red; margin-bottom: 10px; font-size: 13px; display: none;"></div>
+        <div class="modal-actions" style="text-align: right;">
+            <button onclick="closeAddRoomModal()" style="padding: 8px 15px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer;">ยกเลิก</button>
+            <button onclick="saveNewClassroom()" style="padding: 8px 15px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; margin-left: 5px;">บันทึก</button>
+        </div>
+    </div>
+</div>
+
+
+
+    <!-- กล่อง Toast Notification -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="app.js?v=1.0.6" type="module"></script>
+</body>
+</html>
