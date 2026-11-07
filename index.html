@@ -513,6 +513,191 @@
         font-size: 19px;
     }
 }
+
+/* การจัดตารางสรุปแดชบอร์ดบนหน้าจอมือถือ */
+@media (max-width: 768px) {
+    #dashGradeSummaryTable td,
+    #dashRoomSummaryTable td {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        padding: 8px 12px !important;
+        border-bottom: 1px dashed #e2e8f0 !important;
+        text-align: right !important;
+    }
+
+    #dashGradeSummaryTable td::before,
+    #dashRoomSummaryTable td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: #475569;
+        font-size: 13px;
+        text-align: left;
+    }
+}
+/* ========================================== */
+/*  Responsive Confirm Card & Switch          */
+/* ========================================== */
+
+/* โครงสร้างหลักของกล่องยืนยัน */
+.confirm-box {
+    background: #f0fdf4;
+    border: 1.5px solid #bbf7d0;
+    border-radius: 14px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+
+.confirm-box-content {
+    flex: 1;
+}
+
+.confirm-box-title {
+    color: #166534;
+    font-size: 15px;
+    font-weight: 700;
+    margin: 0 0 4px 0;
+}
+
+.confirm-box-desc {
+    color: #4b5563;
+    font-size: 12.5px;
+    margin: 0;
+    line-height: 1.4;
+}
+
+/* แถบควบคุมสถานะและสวิตช์ */
+.confirm-box-action {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    white-space: nowrap;
+}
+
+.confirm-status-badge {
+    font-size: 13px;
+    font-weight: 700;
+    padding: 5px 12px;
+    border-radius: 20px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    display: inline-block;
+}
+
+/* ดีไซน์สวิตช์เปิด-ปิด (Toggle Switch) กดง่าย */
+.toggle-switch-container {
+    position: relative;
+    display: inline-block;
+    width: 52px;
+    height: 28px;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+.toggle-switch-container input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-switch-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #cbd5e1;
+    transition: .3s ease;
+    border-radius: 34px;
+}
+
+.toggle-switch-slider:before {
+    position: absolute;
+    content: "";
+    height: 22px;
+    width: 22px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .3s ease;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+input:checked + .toggle-switch-slider {
+    background-color: #16a34a;
+}
+
+input:checked + .toggle-switch-slider:before {
+    transform: translateX(24px);
+}
+
+input:disabled + .toggle-switch-slider {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* 🔥 ปรับแต่งการแสดงผลบนมือถือ (หน้าจอเล็กกว่า 640px) */
+@media (max-width: 640px) {
+    .confirm-box {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 14px;
+        gap: 12px;
+    }
+
+    .confirm-box-action {
+        justify-content: space-between;
+        background: #ffffff;
+        padding: 10px 14px;
+        border-radius: 10px;
+        border: 1px solid #dcfce7;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+    
+    .confirm-status-badge {
+        border: none;
+        padding: 0;
+        background: transparent;
+    }
+}
+/* จัดการตำแหน่งช่องใส่รหัสผ่านและปุ่มเปิดตา */
+.password-field-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.password-field-wrapper input {
+    padding-right: 48px !important; /* เว้นช่องว่างด้านขวาไม่ให้ตัวหนังสือซ้อนกับไอคอน */
+}
+
+.btn-toggle-password {
+    position: absolute;
+    right: 10px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 17px;
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: background 0.2s, transform 0.1s;
+    user-select: none;
+}
+
+.btn-toggle-password:hover {
+    background: rgba(124, 58, 237, 0.1);
+}
+
+.btn-toggle-password:active {
+    transform: scale(0.92);
+}
 </style>
 </head>
 <body>
@@ -543,11 +728,15 @@
             </div>
 
             <div class="input-group">
-                <label for="password">🔒 รหัสผ่าน</label>
-                <div class="input-field-wrapper">
-                    <input type="password" id="password" placeholder="••••••••" required autocomplete="current-password">
-                </div>
-            </div>
+    <label for="password">🔒 รหัสผ่าน</label>
+    <div class="input-field-wrapper password-field-wrapper">
+        <input type="password" id="password" placeholder="••••••••" required autocomplete="current-password">
+        <!-- 🔥 ปุ่มเปิด/ปิดตาดูรหัสผ่าน -->
+        <button type="button" id="togglePasswordBtn" class="btn-toggle-password" title="แสดง/ซ่อนรหัสผ่าน">
+            <span id="eyeIcon">👁️</span>
+        </button>
+    </div>
+</div>
 
             <!-- กล่องแสดงข้อความ Error -->
             <div id="loginError" class="login-error-msg" style="display: none;"></div>
@@ -726,28 +915,37 @@
 
   <!-- 3. สรุปและแสดงสถานะการยืนยันข้อมูลครูประจำชั้น (60 ห้อง) -->
  <!-- การ์ดสรุปสถานะการยืนยันข้อมูลครูประจำชั้น -->
+<!-- การ์ดสรุปสถานะการยืนยันข้อมูลครูประจำชั้น -->
 <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 25px;">
     
-    <!-- ส่วนหัวการ์ดและป้ายสรุปยอด -->
+    <!-- ส่วนหัวการ์ดและป้ายกรองสถานะ -->
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
         <h3 style="color: var(--primary-purple); font-size: 16px; font-weight: 700; margin: 0;">
             📌 สถานะการยืนยันข้อมูลของครูประจำชั้น (<span id="dashTeacherTotalRoomsText">60 ห้องเรียน</span>)
         </h3>
-        <div style="display: flex; gap: 8px;">
-            <span style="padding: 4px 12px; background: #dcfce7; color: #15803d; border-radius: 20px; font-size: 13px; font-weight: 700; border: 1px solid #86efac;">
+
+        <!-- 🔥 ปุ่มกรองสถานะ (คลิกสลับดูได้ทันที) -->
+        <div style="display: flex; gap: 6px; align-items: center;">
+            <button id="btnFilterConfirmAll" onclick="setConfirmStatusFilter('all')" 
+                style="padding: 4px 12px; background: #f1f5f9; color: #475569; border-radius: 20px; font-size: 13px; font-weight: 700; border: 1.5px solid #cbd5e1; cursor: pointer; transition: all 0.2s;">
+                🌐 ทั้งหมด: <span id="dashTotalRoomsBadge">60</span> ห้อง
+            </button>
+            <button id="btnFilterConfirmed" onclick="setConfirmStatusFilter('confirmed')" 
+                style="padding: 4px 12px; background: #dcfce7; color: #15803d; border-radius: 20px; font-size: 13px; font-weight: 700; border: 1.5px solid #86efac; cursor: pointer; transition: all 0.2s;">
                 ✅ ยืนยันแล้ว: <span id="dashConfirmedCount">0</span> ห้อง
-            </span>
-            <span style="padding: 4px 12px; background: #ffe4e6; color: #be123c; border-radius: 20px; font-size: 13px; font-weight: 700; border: 1px solid #fca5a5;">
+            </button>
+            <button id="btnFilterUnconfirmed" onclick="setConfirmStatusFilter('unconfirmed')" 
+                style="padding: 4px 12px; background: #ffe4e6; color: #be123c; border-radius: 20px; font-size: 13px; font-weight: 700; border: 1.5px solid #fca5a5; cursor: pointer; transition: all 0.2s;">
                 ⏳ ยังไม่ยืนยัน: <span id="dashUnconfirmedCount">0</span> ห้อง
-            </span>
+            </button>
         </div>
     </div>
 
     <hr style="border: 0; border-top: 1px solid #f1f5f9; margin-bottom: 15px;">
 
-    <!-- 🔥 พื้นที่แสดงป้ายสถานะรายห้อง (Grid View) -->
+    <!-- พื้นที่แสดง Grid ป้ายสถานะรายห้อง -->
     <div id="dashTeacherConfirmationGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px;">
-        <!-- JavaScript จะวาดสถานะรายห้องตรงนี้ -->
+        <!-- JavaScript จะวาดสถานะรายห้องตามเงื่อนไขที่เลือกตรงนี้ -->
     </div>
 
 </div>
@@ -782,19 +980,21 @@
                     </div>
 
                     <!-- 3. กล่องยืนยันข้อมูลประจำห้องเรียน -->
-                    <div id="confirmCard" style="display: none; align-items: center; justify-content: space-between; padding: 12px 18px; background: #f0f4ff; border: 1px solid #c7d2fe; border-radius: 8px; margin-bottom: 20px;">
-                        <div>
-                            <strong style="color: var(--primary-purple); font-size: 15px;">✅ การยืนยันความถูกต้องข้อมูลประจำห้องเรียน</strong>
-                            <p id="confirmText" style="font-size: 13px; color: #555; margin-top: 2px;">กรุณาตรวจสอบรายชื่อนักเรียนในที่ปรึกษาให้ถูกต้องก่อนกดเปิดสวิตช์ยืนยัน</p>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <span id="confirmBadge" style="font-size: 13px; font-weight: 600;"></span>
-                            <label class="switch">
-                                <input type="checkbox" id="classroomConfirmToggle" onchange="handleClassroomConfirmChange(this)">
-                                <span class="slider"></span>
-                            </label>
-                        </div>
-                    </div>
+                    <!-- การ์ดยืนยันความถูกต้องข้อมูลประจำห้องเรียน (ปรับปรุงสำหรับมือถือ) -->
+<div id="confirmCard" class="confirm-box">
+    <div class="confirm-box-content">
+        <h4 class="confirm-box-title">✅ การยืนยันความถูกต้องข้อมูลประจำห้องเรียน</h4>
+        <p class="confirm-box-desc">กรุณาตรวจสอบรายชื่อนักเรียนในที่ปรึกษาให้ถูกต้องก่อนกดเปิดสวิตช์ยืนยัน</p>
+    </div>
+    
+    <div class="confirm-box-action">
+        <span id="confirmBadge" class="confirm-status-badge">⏳ ยังไม่ยืนยันข้อมูล</span>
+        <label class="toggle-switch-container">
+            <input type="checkbox" id="classroomConfirmToggle" onchange="handleClassroomConfirmChange(this)">
+            <span class="toggle-switch-slider"></span>
+        </label>
+    </div>
+</div>
 
                     <!-- 4. ฟอร์มวางข้อมูลจาก Excel -->
                     <div id="importSection" style="display: none; margin-bottom: 20px; padding: 15px; background: #fff; border: 1px solid #17a2b8; border-radius: 5px;">
@@ -1271,6 +1471,6 @@
     <!-- กล่อง Toast Notification -->
     <div id="toastContainer" class="toast-container"></div>
 
-    <script src="app.js?v=1.0.6" type="module"></script>
+    <script src="app.js?v=1.0.8" type="module"></script>
 </body>
 </html>

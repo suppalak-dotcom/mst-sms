@@ -1907,6 +1907,154 @@ window.loadExecutiveDashboard = async () => {
 };
 
 // 1. ฟังก์ชันวาดตารางสรุปรายชั้น (ม.1 - ม.6) พร้อมแถบสรุปรวมทั้งโรงเรียน
+// function renderGradeSummaryTable(students) {
+//     const tbody = document.getElementById('dashGradeSummaryBody');
+//     if (!tbody) return;
+
+//     const grades = ['ม.1', 'ม.2', 'ม.3', 'ม.4', 'ม.5', 'ม.6'];
+//     let html = '';
+
+//     // ตัวแปรสะสมยอดรวมทั้งโรงเรียน
+//     let grandRooms = 0;
+//     let grandMale = 0;
+//     let grandFemale = 0;
+//     let grandInactive = 0;
+//     let grandActive = 0;
+//     let grandTotal = 0;
+
+//     grades.forEach(g => {
+//         const gradeStudents = students.filter(s => s.grade_level === g);
+//         let male = 0, female = 0, active = 0, inactive = 0;
+
+//         gradeStudents.forEach(s => {
+//             const gender = (s.gender || '').trim();
+//             if (gender === 'ชาย' || gender === 'นาย') male++;
+//             else female++;
+
+//             const st = (s.status || 'มีตัว').trim();
+//             if (st === 'มีตัว' || st === 'กำลังศึกษา' || st === 'ปกติ') active++;
+//             else inactive++;
+//         });
+
+//         const rowTotal = active + inactive;
+
+//         // สะสมยอดรวม
+//         grandRooms += 10;
+//         grandMale += male;
+//         grandFemale += female;
+//         grandInactive += inactive;
+//         grandActive += active;
+//         grandTotal += rowTotal;
+
+//         html += `
+//             <tr>
+//                 <td style="text-align: center; font-weight: 700; color: var(--primary-purple);">${g}</td>
+//                 <td style="text-align: center;">10 ห้อง</td>
+//                 <td style="text-align: center; color: #2563eb;">${male}</td>
+//                 <td style="text-align: center; color: #db2777;">${female}</td>
+//                 <td style="text-align: center; color: #dc2626; font-weight: 700;">${inactive > 0 ? `⚠️ ${inactive}` : '0'}</td>
+//                 <td style="text-align: center; color: #16a34a; font-weight: 700; background: #f0fdf4;">${active}</td>
+//                 <td style="text-align: center; font-weight: 700; background: #f8fafc;">${rowTotal}</td>
+//             </tr>
+//         `;
+//     });
+
+//     // 🔥 แถบรวบยอดรวมทั้งโรงเรียน (Grand Total Row)
+//     html += `
+//         <tr style="background: #eef2ff; font-weight: 700; border-top: 2px solid #c7d2fe;">
+//             <td style="text-align: center; color: var(--primary-purple); font-size: 15px;">รวมทั้งโรงเรียน</td>
+//             <td style="text-align: center; color: #4338ca;">${grandRooms} ห้อง</td>
+//             <td style="text-align: center; color: #1d4ed8;">${grandMale.toLocaleString()}</td>
+//             <td style="text-align: center; color: #be185d;">${grandFemale.toLocaleString()}</td>
+//             <td style="text-align: center; color: #b91c1c;">⚠️ ${grandInactive.toLocaleString()}</td>
+//             <td style="text-align: center; color: #15803d; background: #dcfce7;">${grandActive.toLocaleString()}</td>
+//             <td style="text-align: center; color: var(--primary-purple); font-size: 16px; background: #e0e7ff;">${grandTotal.toLocaleString()}</td>
+//         </tr>
+//     `;
+
+//     tbody.innerHTML = html;
+// }
+
+// // 2. ฟังก์ชันวาดตารางสรุปรายห้อง พร้อมแถบสรุปรวมประจำชั้น
+// function renderRoomSummaryTable(students, teacherRooms, selectedGrade) {
+//     const tbody = document.getElementById('dashRoomSummaryBody');
+//     if (!tbody) return;
+
+//     let roomsToDisplay = teacherRooms || [];
+//     if (selectedGrade !== 'all') {
+//         roomsToDisplay = roomsToDisplay.filter(r => r.grade_level === selectedGrade);
+//     } else {
+//         roomsToDisplay = roomsToDisplay.filter(r => r.grade_level === 'ม.1');
+//     }
+
+//     roomsToDisplay.sort((a, b) => a.room_number - b.room_number);
+
+//     let html = '';
+//     let roomGroupMale = 0;
+//     let roomGroupFemale = 0;
+//     let roomGroupInactive = 0;
+//     let roomGroupActive = 0;
+//     let roomGroupTotal = 0;
+
+//     roomsToDisplay.forEach(r => {
+//         const roomStudents = students.filter(s => s.grade_level === r.grade_level && Number(s.room_number) === Number(r.room_number));
+//         let male = 0, female = 0, active = 0, inactive = 0;
+
+//         roomStudents.forEach(s => {
+//             const gender = (s.gender || '').trim();
+//             if (gender === 'ชาย' || gender === 'นาย') male++;
+//             else female++;
+
+//             const st = (s.status || 'มีตัว').trim();
+//             if (st === 'มีตัว' || st === 'กำลังศึกษา' || st === 'ปกติ') active++;
+//             else inactive++;
+//         });
+
+//         const rowTotal = active + inactive;
+
+//         // สะสมยอดรวมรายชั้น
+//         roomGroupMale += male;
+//         roomGroupFemale += female;
+//         roomGroupInactive += inactive;
+//         roomGroupActive += active;
+//         roomGroupTotal += rowTotal;
+
+//         const teacherName = r.teacher_names || 'ยังไม่ได้ระบุครู';
+//         const statusBadge = r.is_confirmed 
+//             ? '<span style="color: #16a34a; font-size: 12px; font-weight: 600;">(ยืนยันแล้ว)</span>' 
+//             : '<span style="color: #dc2626; font-size: 12px; font-weight: 600;">(รอยืนยัน)</span>';
+
+//         html += `
+//             <tr>
+//                 <td style="text-align: center; font-weight: 700;">${r.grade_level}/${r.room_number}</td>
+//                 <td style="text-align: center; color: #2563eb;">${male}</td>
+//                 <td style="text-align: center; color: #db2777;">${female}</td>
+//                 <td style="text-align: center; color: #dc2626; font-weight: 700;">${inactive > 0 ? `⚠️ ${inactive}` : '0'}</td>
+//                 <td style="text-align: center; color: #16a34a; font-weight: 700; background: #f0fdf4;">${active}</td>
+//                 <td style="text-align: center; font-weight: 700; background: #f8fafc;">${rowTotal}</td>
+//                 <td>👤 ${teacherName} ${statusBadge}</td>
+//             </tr>
+//         `;
+//     });
+
+//     // 🔥 แถบรวบยอดรวมประจำชั้น (Total Row for Rooms)
+//     const currentGradeLabel = selectedGrade !== 'all' ? selectedGrade : 'ม.1';
+//     html += `
+//         <tr style="background: #eef2ff; font-weight: 700; border-top: 2px solid #c7d2fe;">
+//             <td style="text-align: center; color: var(--primary-purple); font-size: 15px;">รวมระดับชั้น ${currentGradeLabel}</td>
+//             <td style="text-align: center; color: #1d4ed8;">${roomGroupMale.toLocaleString()}</td>
+//             <td style="text-align: center; color: #be185d;">${roomGroupFemale.toLocaleString()}</td>
+//             <td style="text-align: center; color: #b91c1c;">⚠️ ${roomGroupInactive.toLocaleString()}</td>
+//             <td style="text-align: center; color: #15803d; background: #dcfce7;">${roomGroupActive.toLocaleString()}</td>
+//             <td style="text-align: center; color: var(--primary-purple); font-size: 16px; background: #e0e7ff;">${roomGroupTotal.toLocaleString()}</td>
+//             <td style="color: #64748b;">(รวม 10 ห้องเรียน)</td>
+//         </tr>
+//     `;
+
+//     tbody.innerHTML = html;
+// }
+
+// 1. ฟังก์ชันวาดตารางสรุปรายชั้น (ม.1 - ม.6) พร้อม data-label สำหรับมือถือ
 function renderGradeSummaryTable(students) {
     const tbody = document.getElementById('dashGradeSummaryBody');
     if (!tbody) return;
@@ -1914,13 +2062,8 @@ function renderGradeSummaryTable(students) {
     const grades = ['ม.1', 'ม.2', 'ม.3', 'ม.4', 'ม.5', 'ม.6'];
     let html = '';
 
-    // ตัวแปรสะสมยอดรวมทั้งโรงเรียน
-    let grandRooms = 0;
-    let grandMale = 0;
-    let grandFemale = 0;
-    let grandInactive = 0;
-    let grandActive = 0;
-    let grandTotal = 0;
+    let grandRooms = 0, grandMale = 0, grandFemale = 0;
+    let grandInactive = 0, grandActive = 0, grandTotal = 0;
 
     grades.forEach(g => {
         const gradeStudents = students.filter(s => s.grade_level === g);
@@ -1938,7 +2081,6 @@ function renderGradeSummaryTable(students) {
 
         const rowTotal = active + inactive;
 
-        // สะสมยอดรวม
         grandRooms += 10;
         grandMale += male;
         grandFemale += female;
@@ -1946,36 +2088,37 @@ function renderGradeSummaryTable(students) {
         grandActive += active;
         grandTotal += rowTotal;
 
+        // 🔥 ใส่ data-label ทุกคอลัมน์เพื่อให้มือถือดึงชื่อหัวข้อมาแสดง
         html += `
             <tr>
-                <td style="text-align: center; font-weight: 700; color: var(--primary-purple);">${g}</td>
-                <td style="text-align: center;">10 ห้อง</td>
-                <td style="text-align: center; color: #2563eb;">${male}</td>
-                <td style="text-align: center; color: #db2777;">${female}</td>
-                <td style="text-align: center; color: #dc2626; font-weight: 700;">${inactive > 0 ? `⚠️ ${inactive}` : '0'}</td>
-                <td style="text-align: center; color: #16a34a; font-weight: 700; background: #f0fdf4;">${active}</td>
-                <td style="text-align: center; font-weight: 700; background: #f8fafc;">${rowTotal}</td>
+                <td data-label="ระดับชั้น" style="text-align: center; font-weight: 700; color: var(--primary-purple);">${g}</td>
+                <td data-label="จำนวนห้อง" style="text-align: center;">10 ห้อง</td>
+                <td data-label="ชาย" style="text-align: center; color: #2563eb;">${male}</td>
+                <td data-label="หญิง" style="text-align: center; color: #db2777;">${female}</td>
+                <td data-label="สถานะอื่นๆ" style="text-align: center; color: #dc2626; font-weight: 700;">${inactive > 0 ? `⚠️ ${inactive}` : '0'}</td>
+                <td data-label="มีตัว" style="text-align: center; color: #16a34a; font-weight: 700; background: #f0fdf4;">${active}</td>
+                <td data-label="รวมทั้งหมด" style="text-align: center; font-weight: 700; background: #f8fafc;">${rowTotal}</td>
             </tr>
         `;
     });
 
-    // 🔥 แถบรวบยอดรวมทั้งโรงเรียน (Grand Total Row)
+    // แถบรวบยอดรวมทั้งโรงเรียน
     html += `
         <tr style="background: #eef2ff; font-weight: 700; border-top: 2px solid #c7d2fe;">
-            <td style="text-align: center; color: var(--primary-purple); font-size: 15px;">รวมทั้งโรงเรียน</td>
-            <td style="text-align: center; color: #4338ca;">${grandRooms} ห้อง</td>
-            <td style="text-align: center; color: #1d4ed8;">${grandMale.toLocaleString()}</td>
-            <td style="text-align: center; color: #be185d;">${grandFemale.toLocaleString()}</td>
-            <td style="text-align: center; color: #b91c1c;">⚠️ ${grandInactive.toLocaleString()}</td>
-            <td style="text-align: center; color: #15803d; background: #dcfce7;">${grandActive.toLocaleString()}</td>
-            <td style="text-align: center; color: var(--primary-purple); font-size: 16px; background: #e0e7ff;">${grandTotal.toLocaleString()}</td>
+            <td data-label="ระดับชั้น" style="text-align: center; color: var(--primary-purple); font-size: 15px;">รวมทั้งโรงเรียน</td>
+            <td data-label="จำนวนห้อง" style="text-align: center; color: #4338ca;">${grandRooms} ห้อง</td>
+            <td data-label="ชาย" style="text-align: center; color: #1d4ed8;">${grandMale.toLocaleString()}</td>
+            <td data-label="หญิง" style="text-align: center; color: #be185d;">${grandFemale.toLocaleString()}</td>
+            <td data-label="สถานะอื่นๆ" style="text-align: center; color: #b91c1c;">⚠️ ${grandInactive.toLocaleString()}</td>
+            <td data-label="มีตัว" style="text-align: center; color: #15803d; background: #dcfce7;">${grandActive.toLocaleString()}</td>
+            <td data-label="รวมทั้งหมด" style="text-align: center; color: var(--primary-purple); font-size: 16px; background: #e0e7ff;">${grandTotal.toLocaleString()}</td>
         </tr>
     `;
 
     tbody.innerHTML = html;
 }
 
-// 2. ฟังก์ชันวาดตารางสรุปรายห้อง พร้อมแถบสรุปรวมประจำชั้น
+// 2. ฟังก์ชันวาดตารางสรุปรายห้อง พร้อม data-label สำหรับมือถือ
 function renderRoomSummaryTable(students, teacherRooms, selectedGrade) {
     const tbody = document.getElementById('dashRoomSummaryBody');
     if (!tbody) return;
@@ -1990,11 +2133,8 @@ function renderRoomSummaryTable(students, teacherRooms, selectedGrade) {
     roomsToDisplay.sort((a, b) => a.room_number - b.room_number);
 
     let html = '';
-    let roomGroupMale = 0;
-    let roomGroupFemale = 0;
-    let roomGroupInactive = 0;
-    let roomGroupActive = 0;
-    let roomGroupTotal = 0;
+    let roomGroupMale = 0, roomGroupFemale = 0;
+    let roomGroupInactive = 0, roomGroupActive = 0, roomGroupTotal = 0;
 
     roomsToDisplay.forEach(r => {
         const roomStudents = students.filter(s => s.grade_level === r.grade_level && Number(s.room_number) === Number(r.room_number));
@@ -2012,7 +2152,6 @@ function renderRoomSummaryTable(students, teacherRooms, selectedGrade) {
 
         const rowTotal = active + inactive;
 
-        // สะสมยอดรวมรายชั้น
         roomGroupMale += male;
         roomGroupFemale += female;
         roomGroupInactive += inactive;
@@ -2024,37 +2163,35 @@ function renderRoomSummaryTable(students, teacherRooms, selectedGrade) {
             ? '<span style="color: #16a34a; font-size: 12px; font-weight: 600;">(ยืนยันแล้ว)</span>' 
             : '<span style="color: #dc2626; font-size: 12px; font-weight: 600;">(รอยืนยัน)</span>';
 
+        // 🔥 ใส่ data-label ทุกคอลัมน์
         html += `
             <tr>
-                <td style="text-align: center; font-weight: 700;">${r.grade_level}/${r.room_number}</td>
-                <td style="text-align: center; color: #2563eb;">${male}</td>
-                <td style="text-align: center; color: #db2777;">${female}</td>
-                <td style="text-align: center; color: #dc2626; font-weight: 700;">${inactive > 0 ? `⚠️ ${inactive}` : '0'}</td>
-                <td style="text-align: center; color: #16a34a; font-weight: 700; background: #f0fdf4;">${active}</td>
-                <td style="text-align: center; font-weight: 700; background: #f8fafc;">${rowTotal}</td>
-                <td>👤 ${teacherName} ${statusBadge}</td>
+                <td data-label="ห้องเรียน" style="text-align: center; font-weight: 700;">${r.grade_level}/${r.room_number}</td>
+                <td data-label="ชาย" style="text-align: center; color: #2563eb;">${male}</td>
+                <td data-label="หญิง" style="text-align: center; color: #db2777;">${female}</td>
+                <td data-label="สถานะอื่นๆ" style="text-align: center; color: #dc2626; font-weight: 700;">${inactive > 0 ? `⚠️ ${inactive}` : '0'}</td>
+                <td data-label="มีตัว" style="text-align: center; color: #16a34a; font-weight: 700; background: #f0fdf4;">${active}</td>
+                <td data-label="รวมทั้งหมด" style="text-align: center; font-weight: 700; background: #f8fafc;">${rowTotal}</td>
+                <td data-label="ครูประจำชั้น">👤 ${teacherName} ${statusBadge}</td>
             </tr>
         `;
     });
 
-    // 🔥 แถบรวบยอดรวมประจำชั้น (Total Row for Rooms)
     const currentGradeLabel = selectedGrade !== 'all' ? selectedGrade : 'ม.1';
     html += `
         <tr style="background: #eef2ff; font-weight: 700; border-top: 2px solid #c7d2fe;">
-            <td style="text-align: center; color: var(--primary-purple); font-size: 15px;">รวมระดับชั้น ${currentGradeLabel}</td>
-            <td style="text-align: center; color: #1d4ed8;">${roomGroupMale.toLocaleString()}</td>
-            <td style="text-align: center; color: #be185d;">${roomGroupFemale.toLocaleString()}</td>
-            <td style="text-align: center; color: #b91c1c;">⚠️ ${roomGroupInactive.toLocaleString()}</td>
-            <td style="text-align: center; color: #15803d; background: #dcfce7;">${roomGroupActive.toLocaleString()}</td>
-            <td style="text-align: center; color: var(--primary-purple); font-size: 16px; background: #e0e7ff;">${roomGroupTotal.toLocaleString()}</td>
-            <td style="color: #64748b;">(รวม 10 ห้องเรียน)</td>
+            <td data-label="ห้องเรียน" style="text-align: center; color: var(--primary-purple); font-size: 15px;">รวมระดับชั้น ${currentGradeLabel}</td>
+            <td data-label="ชาย" style="text-align: center; color: #1d4ed8;">${roomGroupMale.toLocaleString()}</td>
+            <td data-label="หญิง" style="text-align: center; color: #be185d;">${roomGroupFemale.toLocaleString()}</td>
+            <td data-label="สถานะอื่นๆ" style="text-align: center; color: #b91c1c;">⚠️ ${roomGroupInactive.toLocaleString()}</td>
+            <td data-label="มีตัว" style="text-align: center; color: #15803d; background: #dcfce7;">${roomGroupActive.toLocaleString()}</td>
+            <td data-label="รวมทั้งหมด" style="text-align: center; color: var(--primary-purple); font-size: 16px; background: #e0e7ff;">${roomGroupTotal.toLocaleString()}</td>
+            <td data-label="หมายเหตุ" style="color: #64748b;">(รวม 10 ห้องเรียน)</td>
         </tr>
     `;
 
     tbody.innerHTML = html;
 }
-
-
 
 
 async function restoreSessionPermissions(userEmail) {
@@ -2458,14 +2595,87 @@ window.exportInactiveStudentsCSV = () => {
 };
 
 // ฟังก์ชันนับยอดและวาดสถานะการยืนยันของครูประจำชั้น
+// function renderTeacherConfirmationStatus(teacherRooms, selectedGrade) {
+//     const confirmedCountEl = document.getElementById('dashConfirmedCount');
+//     const unconfirmedCountEl = document.getElementById('dashUnconfirmedCount');
+//     const totalRoomsTextEl = document.getElementById('dashTeacherTotalRoomsText');
+//     const gridEl = document.getElementById('dashTeacherConfirmationGrid');
+
+//     if (!teacherRooms) return;
+
+//     let confirmed = 0;
+//     let unconfirmed = 0;
+
+//     teacherRooms.forEach(r => {
+//         if (r.is_confirmed) confirmed++;
+//         else unconfirmed++;
+//     });
+
+//     const totalRooms = teacherRooms.length;
+
+//     // 1. อัปเดตตัวเลขบนป้ายสรุป
+//     if (confirmedCountEl) confirmedCountEl.textContent = confirmed;
+//     if (unconfirmedCountEl) unconfirmedCountEl.textContent = unconfirmed;
+//     if (totalRoomsTextEl) {
+//         totalRoomsTextEl.textContent = selectedGrade === 'all' ? '60 ห้องเรียน' : `${totalRooms} ห้องเรียน`;
+//     }
+
+//     if (!gridEl) return;
+
+//     // 2. จัดเรียงห้อง ม.1/1 -> ม.6/10
+//     const sortedRooms = [...teacherRooms].sort((a, b) => {
+//         if (a.grade_level !== b.grade_level) {
+//             return a.grade_level.localeCompare(b.grade_level, 'th');
+//         }
+//         return Number(a.room_number) - Number(b.room_number);
+//     });
+
+//     // 3. วาดป้าย Badge แสดงสถานะแต่ละห้อง
+//     let html = '';
+//     sortedRooms.forEach(r => {
+//         const isDone = r.is_confirmed;
+//         const bg = isDone ? '#f0fdf4' : '#fff1f2';
+//         const color = isDone ? '#16a34a' : '#be123c';
+//         const border = isDone ? '#bbf7d0' : '#fecdd3';
+//         const icon = isDone ? '✅' : '⏳';
+
+//         html += `
+//             <div style="background: ${bg}; color: ${color}; border: 1px solid ${border}; padding: 6px 10px; border-radius: 8px; font-size: 13px; font-weight: 600; text-align: center; display: flex; align-items: center; justify-content: center; gap: 4px;">
+//                 <span>${icon}</span>
+//                 <span>${r.grade_level}/${r.room_number}</span>
+//             </div>
+//         `;
+//     });
+
+//     gridEl.innerHTML = html;
+// }
+// ตัวแปรเก็บสถานะการกรองใน Memory
+window.currentConfirmFilter = 'all'; // 'all' | 'confirmed' | 'unconfirmed'
+window.lastTeacherRoomsData = null;
+window.lastSelectedGrade = 'all';
+
+// 🔥 ฟังก์ชันสลับตัวกรองเมื่อกดคลิกป้าย
+window.setConfirmStatusFilter = (filterType) => {
+    window.currentConfirmFilter = filterType;
+    if (window.lastTeacherRoomsData) {
+        renderTeacherConfirmationStatus(window.lastTeacherRoomsData, window.lastSelectedGrade);
+    }
+};
+
+// ฟังก์ชันนับยอดและวาดสถานะการยืนยันตาม Filter ที่เลือก
 function renderTeacherConfirmationStatus(teacherRooms, selectedGrade) {
+    window.lastTeacherRoomsData = teacherRooms;
+    window.lastSelectedGrade = selectedGrade;
+
     const confirmedCountEl = document.getElementById('dashConfirmedCount');
     const unconfirmedCountEl = document.getElementById('dashUnconfirmedCount');
+    const totalRoomsBadgeEl = document.getElementById('dashTotalRoomsBadge');
     const totalRoomsTextEl = document.getElementById('dashTeacherTotalRoomsText');
     const gridEl = document.getElementById('dashTeacherConfirmationGrid');
 
     if (!teacherRooms) return;
 
+    // 1. คำนวณนับยอดรวมภาพรวม
     let confirmed = 0;
     let unconfirmed = 0;
 
@@ -2476,24 +2686,54 @@ function renderTeacherConfirmationStatus(teacherRooms, selectedGrade) {
 
     const totalRooms = teacherRooms.length;
 
-    // 1. อัปเดตตัวเลขบนป้ายสรุป
     if (confirmedCountEl) confirmedCountEl.textContent = confirmed;
     if (unconfirmedCountEl) unconfirmedCountEl.textContent = unconfirmed;
+    if (totalRoomsBadgeEl) totalRoomsBadgeEl.textContent = totalRooms;
     if (totalRoomsTextEl) {
         totalRoomsTextEl.textContent = selectedGrade === 'all' ? '60 ห้องเรียน' : `${totalRooms} ห้องเรียน`;
     }
 
+    // 2. ไฮไลต์ป้ายปุ่มกรองที่กำลังใช้งานอยู่ (Active Highlight)
+    const btnAll = document.getElementById('btnFilterConfirmAll');
+    const btnConfirmed = document.getElementById('btnFilterConfirmed');
+    const btnUnconfirmed = document.getElementById('btnFilterUnconfirmed');
+
+    if (btnAll) {
+        btnAll.style.boxShadow = window.currentConfirmFilter === 'all' ? '0 0 0 3px #64748b' : 'none';
+        btnAll.style.transform = window.currentConfirmFilter === 'all' ? 'scale(1.03)' : 'scale(1)';
+    }
+    if (btnConfirmed) {
+        btnConfirmed.style.boxShadow = window.currentConfirmFilter === 'confirmed' ? '0 0 0 3px #16a34a' : 'none';
+        btnConfirmed.style.transform = window.currentConfirmFilter === 'confirmed' ? 'scale(1.03)' : 'scale(1)';
+    }
+    if (btnUnconfirmed) {
+        btnUnconfirmed.style.boxShadow = window.currentConfirmFilter === 'unconfirmed' ? '0 0 0 3px #be123c' : 'none';
+        btnUnconfirmed.style.transform = window.currentConfirmFilter === 'unconfirmed' ? 'scale(1.03)' : 'scale(1)';
+    }
+
     if (!gridEl) return;
 
-    // 2. จัดเรียงห้อง ม.1/1 -> ม.6/10
-    const sortedRooms = [...teacherRooms].sort((a, b) => {
+    // 3. 🔥 กรองห้องเรียนตามป้ายสถานะที่เลือก
+    let filteredRooms = teacherRooms.filter(r => {
+        if (window.currentConfirmFilter === 'confirmed') return !!r.is_confirmed;
+        if (window.currentConfirmFilter === 'unconfirmed') return !r.is_confirmed;
+        return true; // 'all'
+    });
+
+    // จัดเรียงห้อง ม.1/1 -> ม.6/10
+    const sortedRooms = [...filteredRooms].sort((a, b) => {
         if (a.grade_level !== b.grade_level) {
             return a.grade_level.localeCompare(b.grade_level, 'th');
         }
         return Number(a.room_number) - Number(b.room_number);
     });
 
-    // 3. วาดป้าย Badge แสดงสถานะแต่ละห้อง
+    if (sortedRooms.length === 0) {
+        gridEl.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; color: #94a3b8; padding: 20px 0; font-size: 14px;">ไม่พบห้องเรียนตามเงื่อนไขที่เลือก</div>`;
+        return;
+    }
+
+    // 4. วาดป้ายห้องเรียนที่ผ่านการกรอง
     let html = '';
     sortedRooms.forEach(r => {
         const isDone = r.is_confirmed;
@@ -2537,3 +2777,24 @@ window.loadConfirmedRoomsMap = async () => {
         console.error('Error loading confirmed rooms map:', err);
     }
 };
+
+// 🔥 ระบบสลับเปิด/ปิดการแสดงรหัสผ่านหน้า Login
+document.addEventListener('DOMContentLoaded', () => {
+    const toggleBtn = document.getElementById('togglePasswordBtn');
+    const passwordInput = document.getElementById('password');
+    const eyeIcon = document.getElementById('eyeIcon');
+
+    if (toggleBtn && passwordInput) {
+        toggleBtn.addEventListener('click', () => {
+            const isPassword = passwordInput.type === 'password';
+            
+            // สลับชนิด Input ระหว่าง password และ text
+            passwordInput.type = isPassword ? 'text' : 'password';
+            
+            // สลับสัญลักษณ์ไอคอน (👁️ = ซ่อนรหัส, 🙈 = แสดงรหัส)
+            if (eyeIcon) {
+                eyeIcon.textContent = isPassword ? '🙈' : '👁️';
+            }
+        });
+    }
+});
