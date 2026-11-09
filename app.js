@@ -84,13 +84,16 @@ window.showToast = (message, type = 'success') => {
 //     }
 // };
 window.switchView = (viewId, element) => {
-    // 0. 🔥 ตรวจสอบสิทธิ์การเข้าถึงหน้าพิเศษ (เฉพาะ admin, executive, registrar)
-    const userRole = window.currentUserRole || localStorage.getItem('userRole');
+    // 0. 🔥 ตรวจสอบสิทธิ์เข้าถึง (แปลงเป็นตัวพิมพ์เล็กป้องกันปัญหา Case-Sensitive)
+    const rawRole = window.currentUserRole || localStorage.getItem('userRole') || 'teacher';
+    const userRole = rawRole.toLowerCase().trim();
     const restrictedViews = ['inactiveStudentsView', 'suspendedStudentsView'];
 
     if (restrictedViews.includes(viewId) && !['admin', 'executive', 'registrar'].includes(userRole)) {
         alert('⚠️ คุณไม่มีสิทธิ์เข้าถึงหน้านี้');
-        window.switchView('dashboardView');
+        // ดีดกลับหน้าหลักตาม Role (ครูประจำชั้นไปหน้าจัดการนักเรียน / สิทธิ์อื่นไปหน้าแดชบอร์ด)
+        const fallbackView = (userRole === 'teacher') ? 'studentManageView' : 'dashboardView';
+        window.switchView(fallbackView);
         return;
     }
 
@@ -108,7 +111,7 @@ window.switchView = (viewId, element) => {
         item.classList.remove('active');
     });
 
-    // 4. 🔥 หากไม่ได้ส่ง element มา (เรียกผ่าน JS) ให้หา Element ตาม ID ที่ถูกต้อง
+    // 4. หากไม่ได้ส่ง element มา (เรียกผ่าน JS) ให้หา Element ตาม ID ที่ถูกต้อง
     if (!element) {
         if (viewId === 'dashboardView') element = document.getElementById('menu-dashboard');
         else if (viewId === 'studentManageView') element = document.getElementById('menu-students');
@@ -139,16 +142,6 @@ window.switchView = (viewId, element) => {
     }
 };
 
-// 🔥 ฟังก์ชันสำหรับเปิด/ปิดการแสดงเมนูตาม Role (เรียกใช้หลังยืนยันตัวตนสำเร็จ)
-function setupRoleBasedUI(userRole) {
-    const isAuthorized = ['admin', 'executive', 'registrar'].includes(userRole);
-
-    const inactiveMenu = document.getElementById('menu-inactive-students');
-    if (inactiveMenu) inactiveMenu.style.display = isAuthorized ? 'block' : 'none';
-
-    const suspendedMenu = document.getElementById('menu-suspended-students');
-    if (suspendedMenu) suspendedMenu.style.display = isAuthorized ? 'block' : 'none';
-}
 
 // ฟังก์ชันเปิด/ปิด Sidebar บนมือถือ
 document.getElementById('mobileMenuBtn').addEventListener('click', () => {
@@ -262,20 +255,16 @@ async function applyRoleRestrictions() {
     // ดึงสถานะระบบส่วนกลาง
     await checkSystemStatus();
 
-    // 1. ดึงเมนู "นักเรียนไม่มีตัว / สถานะอื่นๆ"
+    // 1. ดึงเมนู "นักเรียนไม่มีตัว" และ "พักการเรียน"
     const inactiveMenu = document.getElementById('menu-inactive-students');
+    const suspendedMenu = document.getElementById('menu-suspended-students'); // 🔥 ดึงเมนูพักการเรียน
     
-    if (inactiveMenu) {
-        if (role === 'teacher') {
-            // ❌ ซ่อนเมนูสำหรับ "ครูประจำชั้น"
-            inactiveMenu.style.display = 'none';
-        } else {
-            // ✅ แสดงเมนูสำหรับ Admin, Registrar (ฝ่ายทะเบียน) และ Executive (ผู้บริหาร)
-            inactiveMenu.style.display = 'block';
-        }
-    }
+    // 🔥 กำหนดการแสดงผลของทั้ง 2 เมนู (ซ่อนเฉพาะครูประจำชั้น)
+    const canViewReports = (role !== 'teacher'); // เป็น true เมื่อเป็น admin, executive, registrar
+    if (inactiveMenu) inactiveMenu.style.display = canViewReports ? 'block' : 'none';
+    if (suspendedMenu) suspendedMenu.style.display = canViewReports ? 'block' : 'none';
 
-    // 1. ครูประจำชั้น
+    // 2. ครูประจำชั้น
     if (role === 'teacher') {
         userDisplay.innerHTML = `<b>ครูที่ปรึกษา:</b> ชั้น ${grade}/${room} <span style="color: #666; font-weight: normal;">(${displayName})</span>`;
         window.switchView('studentManageView', document.getElementById('menu-students'));
@@ -290,22 +279,21 @@ async function applyRoleRestrictions() {
         const searchBtn = document.getElementById('searchBtn');
         if (searchBtn) searchBtn.click();
     } 
-    // 2. ผู้บริหาร (Executive)
+    // 3. ผู้บริหาร (Executive)
     else if (role === 'executive') {
         userDisplay.innerHTML = `<b>ผู้บริหาร:</b> ${displayName}`;
         if (gradeFilter) gradeFilter.disabled = false;
         if (roomFilter) roomFilter.disabled = false;
         
-        // สลับไปหน้าแดชบอร์ดเป็นหน้าแรกเมื่อผู้บริหารล็อกอิน
         window.switchView('dashboardView', document.getElementById('menu-dashboard'));
     } 
-    // 3. เจ้าหน้าที่ทะเบียน (Registrar)
+    // 4. เจ้าหน้าที่ทะเบียน (Registrar)
     else if (role === 'registrar') {
         userDisplay.innerHTML = `<b>เจ้าหน้าที่ทะเบียน:</b> ${displayName}`;
         if (gradeFilter) gradeFilter.disabled = false;
         if (roomFilter) roomFilter.disabled = false;
     } 
-    // 4. ผู้ดูแลระบบ (Admin)
+    // 5. ผู้ดูแลระบบ (Admin)
     else {
         userDisplay.innerHTML = `<b>ผู้ดูแลระบบ (Admin):</b> ${displayName}`;
         if (gradeFilter) gradeFilter.disabled = false;
@@ -316,12 +304,10 @@ async function applyRoleRestrictions() {
     const menuDashboard = document.getElementById('menu-dashboard');
     const menuStaffs = document.getElementById('menu-staffs');
     
-    // ผู้บริหาร, เจ้าหน้าที่ทะเบียน และ Admin เห็นแดชบอร์ด
     if (menuDashboard) {
         menuDashboard.style.display = (role === 'executive' || role === 'registrar' || role === 'admin') ? 'block' : 'none';
     }
     
-    // เจ้าหน้าที่ทะเบียน และ Admin เห็นจัดการบุคลากร
     if (menuStaffs) {
         menuStaffs.style.display = (role === 'registrar' || role === 'admin') ? 'block' : 'none';
     }
@@ -3035,3 +3021,4 @@ function renderSuspendedGradeSummaryTable(data) {
 
     summaryBody.innerHTML = html;
 }
+
