@@ -759,19 +759,21 @@ input:disabled + .toggle-switch-slider {
     <div id="appSection">
         
     
-        <!-- แถบเมนูด้านข้าง (Sidebar) -->
+<!-- แถบเมนูด้านข้าง (Sidebar) -->
 <nav id="sidebar">
     <div class="sidebar-brand" style="display: flex; align-items: center; justify-content: center; gap: 10px; padding: 15px 20px;">
-    <img src="https://chaiyadej.anubansurat.ac.th/suppalak/img/MuangST2020.jpg" alt="โลโก้โรงเรียน" style="width: 36px; height: 36px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));">
-    <span style="font-weight: 700; letter-spacing: 0.5px;">SMART SCHOOL</span>
-</div>
+        <img src="https://chaiyadej.anubansurat.ac.th/suppalak/img/MuangST2020.jpg" alt="โลโก้โรงเรียน" style="width: 36px; height: 36px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));">
+        <span style="font-weight: 700; letter-spacing: 0.5px;">SMART SCHOOL</span>
+    </div>
     <ul class="sidebar-menu" id="mainMenu">
         <li id="menu-dashboard" onclick="switchView('dashboardView', this)">📊 แดชบอร์ดสรุปผล</li>
         <li id="menu-students" onclick="switchView('studentManageView', this)" class="active">🎓 ข้อมูลนักเรียน</li>
-        <li id="menu-inactive-students" onclick="switchView('inactiveStudentsView', this)">⚠️ นักเรียนไม่มีตัว</li>
-        <li id="menu-Suspended-students" onclick="switchView('suspendedStudentsView', this)">⏸️ พักการเรียน</li>
-        <li id="menu-staffs" onclick="switchView('staffManageView', this)">👥 จัดการบุคลากร</li>
         
+        <!-- 🔥 ซ่อนไว้เป็นค่าเริ่มต้นเพื่อรอ JS ตรวจสอบสิทธิ์ Role -->
+        <li id="menu-inactive-students" onclick="switchView('inactiveStudentsView', this)" style="display: none;">⚠️ นักเรียนไม่มีตัว</li>
+        <li id="menu-suspended-students" onclick="switchView('suspendedStudentsView', this)" style="display: none;">⏸️ พักการเรียน</li>
+        
+        <li id="menu-staffs" onclick="switchView('staffManageView', this)">👥 จัดการบุคลากร</li>
     </ul>
 </nav>
 

@@ -38,7 +38,62 @@ window.showToast = (message, type = 'success') => {
 
 
 // ฟังก์ชันสลับหน้า (แก้ไข Selector #sidebar li ให้ล้างค่า active ได้ถูกต้อง)
+// window.switchView = (viewId, element) => {
+//     // 1. ซ่อนทุก view-section
+//     document.querySelectorAll('.view-section').forEach(view => {
+//         view.style.display = 'none';
+//     });
+
+//     // 2. แสดง view ที่เลือก
+//     const targetView = document.getElementById(viewId);
+//     if (targetView) targetView.style.display = 'block';
+
+//     // 3. ล้างไฮไลต์ active จากแถบเมนูเดิมทั้งหมด
+//     document.querySelectorAll('#sidebar li, #sidebar .nav-item').forEach(item => {
+//         item.classList.remove('active');
+//     });
+
+//     // หากไม่ได้ส่ง element มา (เรียกผ่าน JS) ให้หา Element ของเมนูนั้นให้อัตโนมัติ
+//     if (!element) {
+//         if (viewId === 'dashboardView') element = document.getElementById('menu-dashboard');
+//         else if (viewId === 'studentManageView') element = document.getElementById('menu-students');
+//         else if (viewId === 'staffManageView') element = document.getElementById('menu-staffs');
+//         else if (viewId === 'suspendedStudentsView') element = document.getElementById('navSuspendedStudents') || document.getElementById('menu-suspended');
+//         else if (viewId === 'inactiveStudentsView') element = document.getElementById('menu-inactive');
+//     }
+
+//     // 4. ใส่ไฮไลต์ active ให้กับเมนูที่กำลังเปิดอยู่
+//     if (element) {
+//         element.classList.add('active');
+//     }
+
+//     // ซ่อน Sidebar บนมือถือเมื่อกดเลือกเมนู
+//     if (window.innerWidth <= 768) {
+//         document.getElementById('sidebar')?.classList.remove('open');
+//     }
+
+//     // 5. โหลดข้อมูลเฉพาะของแต่ละ View
+//     if (viewId === 'staffManageView') {
+//         switchStaffTab('teachers');
+//     } else if (viewId === 'dashboardView') {
+//         loadExecutiveDashboard();
+//     } else if (viewId === 'suspendedStudentsView') {
+//         loadSuspendedStudentsView(); // 🔥 แก้ไขจาก sectionId เป็น viewId
+//     } else if (viewId === 'inactiveStudentsView') {
+//         loadInactiveStudentsView();
+//     }
+// };
 window.switchView = (viewId, element) => {
+    // 0. 🔥 ตรวจสอบสิทธิ์การเข้าถึงหน้าพิเศษ (เฉพาะ admin, executive, registrar)
+    const userRole = window.currentUserRole || localStorage.getItem('userRole');
+    const restrictedViews = ['inactiveStudentsView', 'suspendedStudentsView'];
+
+    if (restrictedViews.includes(viewId) && !['admin', 'executive', 'registrar'].includes(userRole)) {
+        alert('⚠️ คุณไม่มีสิทธิ์เข้าถึงหน้านี้');
+        window.switchView('dashboardView');
+        return;
+    }
+
     // 1. ซ่อนทุก view-section
     document.querySelectorAll('.view-section').forEach(view => {
         view.style.display = 'none';
@@ -53,16 +108,16 @@ window.switchView = (viewId, element) => {
         item.classList.remove('active');
     });
 
-    // หากไม่ได้ส่ง element มา (เรียกผ่าน JS) ให้หา Element ของเมนูนั้นให้อัตโนมัติ
+    // 4. 🔥 หากไม่ได้ส่ง element มา (เรียกผ่าน JS) ให้หา Element ตาม ID ที่ถูกต้อง
     if (!element) {
         if (viewId === 'dashboardView') element = document.getElementById('menu-dashboard');
         else if (viewId === 'studentManageView') element = document.getElementById('menu-students');
         else if (viewId === 'staffManageView') element = document.getElementById('menu-staffs');
-        else if (viewId === 'suspendedStudentsView') element = document.getElementById('navSuspendedStudents') || document.getElementById('menu-suspended');
-        else if (viewId === 'inactiveStudentsView') element = document.getElementById('menu-inactive');
+        else if (viewId === 'suspendedStudentsView') element = document.getElementById('menu-suspended-students');
+        else if (viewId === 'inactiveStudentsView') element = document.getElementById('menu-inactive-students');
     }
 
-    // 4. ใส่ไฮไลต์ active ให้กับเมนูที่กำลังเปิดอยู่
+    // 5. ใส่ไฮไลต์ active ให้กับเมนูที่กำลังเปิดอยู่
     if (element) {
         element.classList.add('active');
     }
@@ -72,17 +127,28 @@ window.switchView = (viewId, element) => {
         document.getElementById('sidebar')?.classList.remove('open');
     }
 
-    // 5. โหลดข้อมูลเฉพาะของแต่ละ View
+    // 6. โหลดข้อมูลเฉพาะของแต่ละ View
     if (viewId === 'staffManageView') {
         switchStaffTab('teachers');
     } else if (viewId === 'dashboardView') {
         loadExecutiveDashboard();
     } else if (viewId === 'suspendedStudentsView') {
-        loadSuspendedStudentsView(); // 🔥 แก้ไขจาก sectionId เป็น viewId
+        loadSuspendedStudentsView();
     } else if (viewId === 'inactiveStudentsView') {
         loadInactiveStudentsView();
     }
 };
+
+// 🔥 ฟังก์ชันสำหรับเปิด/ปิดการแสดงเมนูตาม Role (เรียกใช้หลังยืนยันตัวตนสำเร็จ)
+function setupRoleBasedUI(userRole) {
+    const isAuthorized = ['admin', 'executive', 'registrar'].includes(userRole);
+
+    const inactiveMenu = document.getElementById('menu-inactive-students');
+    if (inactiveMenu) inactiveMenu.style.display = isAuthorized ? 'block' : 'none';
+
+    const suspendedMenu = document.getElementById('menu-suspended-students');
+    if (suspendedMenu) suspendedMenu.style.display = isAuthorized ? 'block' : 'none';
+}
 
 // ฟังก์ชันเปิด/ปิด Sidebar บนมือถือ
 document.getElementById('mobileMenuBtn').addEventListener('click', () => {
