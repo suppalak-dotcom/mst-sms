@@ -834,6 +834,12 @@ input:disabled + .toggle-switch-slider {
       <span style="color: #555; font-size: 14px; font-weight: bold;">สถานะปกติ (กำลังศึกษา)</span>
       <h1 id="kpiActiveStudents" style="margin: 10px 0 0 0; color: #e65100;">0</h1>
       <small style="color: #666;">คน</small>
+      <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed #ef9a9a; font-size: 12px; color: #444; display: flex; flex-direction: column; gap: 4px;">
+       <div style="display: flex; justify-content: space-between; align-items: center;">
+      <span>• พักการเรียน:</span>
+      <b id="countSuspend" style="color: #f57f17;">0 คน</b>
+    </div>
+    </div>
     </div>
 
     <div class="kpi-card" style="background: #ffebee; padding: 20px; border-radius: 10px; border-left: 5px solid #f44336;">
@@ -852,10 +858,7 @@ input:disabled + .toggle-switch-slider {
       <span>• ย้ายสถานศึกษา:</span>
       <b id="countTransfer" style="color: #d84315;">0 คน</b>
     </div>
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-      <span>• พักการเรียน:</span>
-      <b id="countSuspend" style="color: #f57f17;">0 คน</b>
-    </div>
+   
   </div>
 </div>
 

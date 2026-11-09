@@ -814,11 +814,16 @@ function renderSummaryCards(data) {
         summarySection.style.display = 'none';
         return;
     }
-
+let suspendCount = 0;
     const total = data.length;
     const maleCount = data.filter(s => s.gender === 'ชาย').length;
     const femaleCount = data.filter(s => s.gender === 'หญิง').length;
-    const presentCount = data.filter(s => s.status === 'มีตัว').length;
+    //const presentCount = data.filter(s => s.status === 'มีตัว').length;
+    const presentCount = data.filter(s => {
+        const st = (s.status || 'มีตัว').trim();
+        if (st.includes('พักการเรียน')) suspendCount++;
+        return st === 'มีตัว' || st === 'กำลังศึกษา' || st === 'ปกติ' || st.includes('พักการเรียน');
+    }).length;
     const otherCount = total - presentCount;
 
     summarySection.style.display = 'block';
@@ -1860,19 +1865,37 @@ window.loadExecutiveDashboard = async () => {
     let maleCount = 0, femaleCount = 0, activeCount = 0, inactiveCount = 0;
     let absenceCount = 0, transferCount = 0, suspendCount = 0;
 
+    // students.forEach(s => {
+    //     const gender = (s.gender || '').trim();
+    //     if (gender === 'ชาย' || gender === 'นาย') maleCount++;
+    //     else if (gender === 'หญิง' || gender === 'นางสาว' || gender === 'เด็กหญิง') femaleCount++;
+
+    //     const st = (s.status || 'มีตัว').trim();
+    //     if (st === 'มีตัว' || st === 'กำลังศึกษา' || st === 'ปกติ' || st.includes('พักการเรียน'))  {
+    //         activeCount++;
+    //     } else {
+    //         inactiveCount++;
+    //         if (st.includes('ขาดเรียน')) absenceCount++;
+    //         else if (st.includes('ย้าย')) transferCount++;
+    //         // else if (st.includes('พักการเรียน')) suspendCount++;
+    //     }
+    // });
     students.forEach(s => {
         const gender = (s.gender || '').trim();
         if (gender === 'ชาย' || gender === 'นาย') maleCount++;
         else if (gender === 'หญิง' || gender === 'นางสาว' || gender === 'เด็กหญิง') femaleCount++;
 
         const st = (s.status || 'มีตัว').trim();
-        if (st === 'มีตัว' || st === 'กำลังศึกษา' || st === 'ปกติ') {
+        
+        // 🔥 "พักการเรียน" ให้นับรวมเข้า Active (มีตัว/กำลังศึกษา)
+        if (st === 'มีตัว' || st === 'กำลังศึกษา' || st === 'ปกติ' || st.includes('พักการเรียน')) {
             activeCount++;
+            if (st.includes('พักการเรียน')) suspendCount++;
         } else {
+            // 🔥 สถานะอื่นๆ เหลือเฉพาะ ขาดเรียน และ ย้ายสถานศึกษา
             inactiveCount++;
             if (st.includes('ขาดเรียน')) absenceCount++;
             else if (st.includes('ย้าย')) transferCount++;
-            else if (st.includes('พักการเรียน')) suspendCount++;
         }
     });
 
