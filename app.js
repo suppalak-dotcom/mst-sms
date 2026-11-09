@@ -2371,7 +2371,7 @@ async function loadInactiveStudentsView() {
     // 2. กรองเฉพาะนักเรียนที่ไม่ได้มีสถานะ "มีตัว / กำลังศึกษา / ปกติ"
     window.rawInactiveStudents = allStudents.filter(s => {
         const st = (s.status || 'มีตัว').trim();
-        return !(st === 'มีตัว' || st === 'กำลังศึกษา' || st === 'ปกติ');
+        return !(st === 'มีตัว' || st === 'กำลังศึกษา' || st === 'ปกติ' || st.includes('พักการเรียน'));
     });
 
     // 3. คำนวณและอัปเดต KPI Cards
@@ -2390,13 +2390,13 @@ function updateInactiveKPICards(data) {
         const st = (s.status || '').trim();
         if (st.includes('ขาดเรียน')) absence++;
         else if (st.includes('ย้าย')) transfer++;
-        else if (st.includes('พักการเรียน')) suspend++;
+        //else if (st.includes('พักการเรียน')) suspend++;
     });
 
     document.getElementById('inactiveKpiTotal').textContent = total.toLocaleString();
     document.getElementById('inactiveKpiAbsence').textContent = absence.toLocaleString();
     document.getElementById('inactiveKpiTransfer').textContent = transfer.toLocaleString();
-    document.getElementById('inactiveKpiSuspend').textContent = suspend.toLocaleString();
+    //document.getElementById('inactiveKpiSuspend').textContent = suspend.toLocaleString();
 }
 
 // ฟังก์ชันกรองข้อมูล จัดเรียง และสั่งวาดตารางสรุป/รายชื่อ
@@ -2471,12 +2471,12 @@ function renderInactiveGradeSummaryTable(data) {
                 <td data-label="ระดับชั้น" style="text-align: center; font-weight: 700; color: var(--primary-purple);">${g}</td>
                 <td data-label="ขาดเรียนนาน" style="text-align: center; color: #be123c; font-weight: 600;">${abs}</td>
                 <td data-label="ย้ายสถานศึกษา" style="text-align: center; color: #c2410c; font-weight: 600;">${trans}</td>
-                <td data-label="พักการเรียน" style="text-align: center; color: #d97706; font-weight: 600;">${susp}</td>
+                
                 <td data-label="รวมทั้งหมด" style="text-align: center; font-weight: 700; background: #faf5ff; color: var(--primary-purple);">${totalGrade}</td>
             </tr>
         `;
     });
-
+//// <td data-label="พักการเรียน" style="text-align: center; color: #d97706; font-weight: 600;">${susp}</td>
     summaryBody.innerHTML = html;
 }
 
