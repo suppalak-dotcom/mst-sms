@@ -48,19 +48,21 @@ window.switchView = (viewId, element) => {
     const targetView = document.getElementById(viewId);
     if (targetView) targetView.style.display = 'block';
 
-    // 3. 🔥 ล้างไฮไลต์ active จากแถบเมนูเดิมทั้งหมด (แก้ไขจาก .sidebar li เป็น #sidebar li)
-    document.querySelectorAll('#sidebar li').forEach(li => {
-        li.classList.remove('active');
+    // 3. ล้างไฮไลต์ active จากแถบเมนูเดิมทั้งหมด
+    document.querySelectorAll('#sidebar li, #sidebar .nav-item').forEach(item => {
+        item.classList.remove('active');
     });
 
-    // หากไม่ได้ส่ง element มา (เรียกจาก JS) ให้หา Element ของเมนูนั้นให้อัตโนมัติ
+    // หากไม่ได้ส่ง element มา (เรียกผ่าน JS) ให้หา Element ของเมนูนั้นให้อัตโนมัติ
     if (!element) {
         if (viewId === 'dashboardView') element = document.getElementById('menu-dashboard');
         else if (viewId === 'studentManageView') element = document.getElementById('menu-students');
         else if (viewId === 'staffManageView') element = document.getElementById('menu-staffs');
+        else if (viewId === 'suspendedStudentsView') element = document.getElementById('navSuspendedStudents') || document.getElementById('menu-suspended');
+        else if (viewId === 'inactiveStudentsView') element = document.getElementById('menu-inactive');
     }
 
-    // 4. ใส่ไฮไลต์ active ให้กับเมนูที่กำลังเปิดอยู่เพียงเมนูเดียว
+    // 4. ใส่ไฮไลต์ active ให้กับเมนูที่กำลังเปิดอยู่
     if (element) {
         element.classList.add('active');
     }
@@ -70,16 +72,15 @@ window.switchView = (viewId, element) => {
         document.getElementById('sidebar')?.classList.remove('open');
     }
 
-    // 5. โหลดข้อมูลเฉพาะของแต่ละหน้า
+    // 5. โหลดข้อมูลเฉพาะของแต่ละ View
     if (viewId === 'staffManageView') {
         switchStaffTab('teachers');
-    }
-
-    // โหลดข้อมูลเฉพาะของแต่ละ View
-    if (viewId === 'dashboardView') {
+    } else if (viewId === 'dashboardView') {
         loadExecutiveDashboard();
+    } else if (viewId === 'suspendedStudentsView') {
+        loadSuspendedStudentsView(); // 🔥 แก้ไขจาก sectionId เป็น viewId
     } else if (viewId === 'inactiveStudentsView') {
-        loadInactiveStudentsView(); // 🔥 โหลดข้อมูลหน้ารายงานนักเรียนไม่มีตัว
+        loadInactiveStudentsView();
     }
 };
 
@@ -2098,7 +2099,7 @@ function renderGradeSummaryTable(students) {
             else female++;
 
             const st = (s.status || 'มีตัว').trim();
-            if (st === 'มีตัว' || st === 'กำลังศึกษา' || st === 'ปกติ') active++;
+            if (st === 'มีตัว' || st === 'กำลังศึกษา' || st === 'ปกติ' || st === 'พักการเรียน') active++;
             else inactive++;
         });
 
@@ -2466,7 +2467,17 @@ function renderInactiveGradeSummaryTable(data) {
 
         const totalGrade = abs + trans + susp;
 
-        html += `
+    //     html += `
+    //         <tr>
+    //             <td data-label="ระดับชั้น" style="text-align: center; font-weight: 700; color: var(--primary-purple);">${g}</td>
+    //             <td data-label="ขาดเรียนนาน" style="text-align: center; color: #be123c; font-weight: 600;">${abs}</td>
+    //             <td data-label="ย้ายสถานศึกษา" style="text-align: center; color: #c2410c; font-weight: 600;">${trans}</td>
+    //             <td data-label="พักการเรียน" style="text-align: center; color: #d97706; font-weight: 600;">${susp}</td>
+    //             <td data-label="รวมทั้งหมด" style="text-align: center; font-weight: 700; background: #faf5ff; color: var(--primary-purple);">${totalGrade}</td>
+    //         </tr>
+    //     `;
+    // });
+     html += `
             <tr>
                 <td data-label="ระดับชั้น" style="text-align: center; font-weight: 700; color: var(--primary-purple);">${g}</td>
                 <td data-label="ขาดเรียนนาน" style="text-align: center; color: #be123c; font-weight: 600;">${abs}</td>
@@ -2476,7 +2487,7 @@ function renderInactiveGradeSummaryTable(data) {
             </tr>
         `;
     });
-//// <td data-label="พักการเรียน" style="text-align: center; color: #d97706; font-weight: 600;">${susp}</td>
+
     summaryBody.innerHTML = html;
 }
 
@@ -2821,3 +2832,140 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+
+// ==========================================
+//  ระบบจัดการหน้ารายงานนักเรียนพักการเรียน (ติดผูกกับ window)
+// ==========================================
+
+// 1. โหลดข้อมูลนักเรียนพักการเรียน
+window.loadSuspendedStudentsView = async () => {
+    const listBody = document.getElementById('suspendedStudentListBody');
+    if (listBody) {
+        listBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">กำลังโหลดข้อมูลนักเรียนพักการเรียน...</td></tr>';
+    }
+
+    // ดึงนักเรียนทั้งหมด
+    const allStudents = await fetchAllStudentsFromDB('all');
+
+    // 🔥 กรองเฉพาะนักเรียนที่มีสถานะ "พักการเรียน"
+    window.rawSuspendedStudents = allStudents.filter(s => {
+        const st = (s.status || '').trim();
+        return st.includes('พักการเรียน');
+    });
+
+    // อัปเดตการ์ด KPI และตารางสรุป
+    updateSuspendedKPICards(window.rawSuspendedStudents);
+    renderSuspendedGradeSummaryTable(window.rawSuspendedStudents);
+    window.filterAndRenderSuspendedView();
+};
+
+// 2. 🔥 ฟังก์ชันกรองและวาดตารางรายชื่อนักเรียน (ผูกเข้ากับ window เพื่อให้ HTML onchange / onkeyup เรียกได้)
+window.filterAndRenderSuspendedView = () => {
+    const listBody = document.getElementById('suspendedStudentListBody');
+    if (!listBody || !window.rawSuspendedStudents) return;
+
+    const gradeFilter = document.getElementById('suspendedFilterGrade') ? document.getElementById('suspendedFilterGrade').value : 'all';
+    const searchText = document.getElementById('suspendedSearchInput') ? document.getElementById('suspendedSearchInput').value.trim().toLowerCase() : '';
+
+    let filtered = [...window.rawSuspendedStudents];
+
+    if (gradeFilter !== 'all') {
+        filtered = filtered.filter(s => s.grade_level === gradeFilter);
+    }
+
+    if (searchText !== '') {
+        filtered = filtered.filter(s => 
+            (s.student_id && s.student_id.toLowerCase().includes(searchText)) ||
+            (s.first_name && s.first_name.toLowerCase().includes(searchText))
+        );
+    }
+
+    if (filtered.length === 0) {
+        listBody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">ไม่พบข้อมูลนักเรียนพักการเรียน</td></tr>';
+        return;
+    }
+
+    let html = '';
+    filtered.forEach((s, idx) => {
+        html += `
+            <tr>
+                <td data-label="ลำดับ" style="text-align: center;">${idx + 1}</td>
+                <td data-label="เลขประจำตัว" style="text-align: center; font-weight: 600;">${s.student_id || '-'}</td>
+                <td data-label="ชื่อ-นามสกุล" style="font-weight: 600;">${s.prefix || ''}${s.first_name || ''}  ${s.last_name || ''}</td>
+                <td data-label="ชั้น/ห้อง" style="text-align: center;">${s.grade_level}/${s.room_number}</td>
+                <td data-label="เพศ" style="text-align: center;">${s.gender || '-'}</td>
+                <td data-label="สถานะ" style="text-align: center;">
+                    <span style="background: #fef3c7; color: #b45309; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 700;">
+                        ⏸️ ${s.status}
+                    </span>
+                </td>
+                <td data-label="หมายเหตุ" style="text-align: center; color: #64748b;">${s.note || '-'}</td>
+            </tr>
+        `;
+    });
+
+    listBody.innerHTML = html;
+};
+
+// 3. ฟังก์ชันอัปเดตตัวเลขการ์ด KPI สรุปภาพรวม
+function updateSuspendedKPICards(data) {
+    let total = data.length;
+    let male = 0, female = 0;
+
+    data.forEach(s => {
+        const gender = (s.gender || '').trim();
+        if (gender === 'ชาย' || gender === 'นาย') male++;
+        else female++;
+    });
+
+    if (document.getElementById('suspendedKpiTotal')) document.getElementById('suspendedKpiTotal').textContent = total.toLocaleString();
+    if (document.getElementById('suspendedKpiMale')) document.getElementById('suspendedKpiMale').textContent = male.toLocaleString();
+    if (document.getElementById('suspendedKpiFemale')) document.getElementById('suspendedKpiFemale').textContent = female.toLocaleString();
+}
+
+// 4. ฟังก์ชันวาดตารางสรุปรายชั้น (ม.1 - ม.6)
+function renderSuspendedGradeSummaryTable(data) {
+    const summaryBody = document.getElementById('suspendedGradeSummaryBody');
+    if (!summaryBody) return;
+
+    const grades = ['ม.1', 'ม.2', 'ม.3', 'ม.4', 'ม.5', 'ม.6'];
+    let html = '';
+    let grandMale = 0, grandFemale = 0, grandTotal = 0;
+
+    grades.forEach(g => {
+        const gradeStudents = data.filter(s => s.grade_level === g);
+        let male = 0, female = 0;
+
+        gradeStudents.forEach(s => {
+            const gender = (s.gender || '').trim();
+            if (gender === 'ชาย' || gender === 'นาย') male++;
+            else female++;
+        });
+
+        const totalGrade = male + female;
+        grandMale += male;
+        grandFemale += female;
+        grandTotal += totalGrade;
+
+        html += `
+            <tr>
+                <td data-label="ระดับชั้น" style="text-align: center; font-weight: 700; color: #b45309;">${g}</td>
+                <td data-label="ชาย" style="text-align: center; color: #2563eb;">${male}</td>
+                <td data-label="หญิง" style="text-align: center; color: #db2777;">${female}</td>
+                <td data-label="รวมทั้งหมด" style="text-align: center; font-weight: 700; background: #fffbeb; color: #d97706;">${totalGrade}</td>
+            </tr>
+        `;
+    });
+
+    html += `
+        <tr style="background: #fef3c7; font-weight: 700; border-top: 2px solid #fde68a;">
+            <td data-label="ระดับชั้น" style="text-align: center; color: #b45309;">รวมทุกระดับชั้น</td>
+            <td data-label="ชาย" style="text-align: center; color: #1d4ed8;">${grandMale}</td>
+            <td data-label="หญิง" style="text-align: center; color: #be185d;">${grandFemale}</td>
+            <td data-label="รวมทั้งหมด" style="text-align: center; color: #b45309; font-size: 15px;">${grandTotal} คน</td>
+        </tr>
+    `;
+
+    summaryBody.innerHTML = html;
+}

@@ -769,6 +769,7 @@ input:disabled + .toggle-switch-slider {
         <li id="menu-dashboard" onclick="switchView('dashboardView', this)">📊 แดชบอร์ดสรุปผล</li>
         <li id="menu-students" onclick="switchView('studentManageView', this)" class="active">🎓 ข้อมูลนักเรียน</li>
         <li id="menu-inactive-students" onclick="switchView('inactiveStudentsView', this)">⚠️ นักเรียนไม่มีตัว</li>
+        <li id="menu-Suspended-students" onclick="switchView('suspendedStudentsView', this)">⏸️ พักการเรียน</li>
         <li id="menu-staffs" onclick="switchView('staffManageView', this)">👥 จัดการบุคลากร</li>
         
     </ul>
@@ -1164,7 +1165,7 @@ input:disabled + .toggle-switch-slider {
                 <option value="all">-- ทุกประเภทสถานะ --</option>
                 <option value="ขาดเรียน">ขาดเรียนติดต่อกันนาน</option>
                 <option value="ย้าย">ย้ายสถานศึกษา</option>
-                <option value="พักการเรียน">พักการเรียน</option>
+                <!-- <option value="พักการเรียน">พักการเรียน</option> -->
             </select>
         </div>
 
@@ -1225,6 +1226,101 @@ input:disabled + .toggle-switch-slider {
         </div>
     </div>
 
+</div>
+
+<!-- ========================================== -->
+<!--  หน้ารายงานนักเรียนพักการเรียน              -->
+<!-- ========================================== -->
+<div id="suspendedStudentsView" class="view-section" style="display: none;">
+    <div style="margin-bottom: 20px;">
+        <h2 style="color: #b45309; font-size: 22px; font-weight: 700; margin: 0 0 6px 0;">
+            ⏸️ รายงานนักเรียนสถานะพักการเรียน
+        </h2>
+        <p style="color: #64748b; font-size: 13.5px; margin: 0;">
+            ข้อมูลสรุปและรายชื่อนักเรียนที่อยู่ระหว่างการพักการเรียนทั้งหมด
+        </p>
+    </div>
+
+    <!-- การ์ดสรุปยอด KPI นักเรียนพักการเรียน -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;">
+        <div class="kpi-card" style="background: #fffbeb; padding: 18px; border-radius: 12px; border-left: 5px solid #f59e0b; box-shadow: 0 2px 6px rgba(0,0,0,0.04);">
+            <span style="color: #b45309; font-size: 13px; font-weight: 700;">👥 รวมนักเรียนพักการเรียน</span>
+            <h1 id="suspendedKpiTotal" style="margin: 8px 0 0 0; color: #d97706; font-size: 30px;">0</h1>
+            <small style="color: #b45309;">คน</small>
+        </div>
+        <div class="kpi-card" style="background: #eff6ff; padding: 18px; border-radius: 12px; border-left: 5px solid #3b82f6; box-shadow: 0 2px 6px rgba(0,0,0,0.04);">
+            <span style="color: #1e40af; font-size: 13px; font-weight: 700;">👨 นักเรียนชาย</span>
+            <h1 id="suspendedKpiMale" style="margin: 8px 0 0 0; color: #2563eb; font-size: 30px;">0</h1>
+            <small style="color: #1e40af;">คน</small>
+        </div>
+        <div class="kpi-card" style="background: #fdf2f8; padding: 18px; border-radius: 12px; border-left: 5px solid #ec4899; box-shadow: 0 2px 6px rgba(0,0,0,0.04);">
+            <span style="color: #9d174d; font-size: 13px; font-weight: 700;">👩 นักเรียนหญิง</span>
+            <h1 id="suspendedKpiFemale" style="margin: 8px 0 0 0; color: #db2777; font-size: 30px;">0</h1>
+            <small style="color: #9d174d;">คน</small>
+        </div>
+    </div>
+
+    <!-- ตารางสรุปแยกตามระดับชั้น -->
+    <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 25px;">
+        <h3 style="color: #b45309; font-size: 16px; font-weight: 700; margin-top: 0; margin-bottom: 15px;">
+            📊 สรุปจำนวนนักเรียนพักการเรียนแยกตามระดับชั้น
+        </h3>
+        <div class="table-responsive">
+            <table class="data-table" id="suspendedGradeSummaryTable">
+                <thead>
+                    <tr>
+                        <th style="text-align: center;">ระดับชั้น</th>
+                        <th style="text-align: center;">ชาย</th>
+                        <th style="text-align: center;">หญิง</th>
+                        <th style="text-align: center;">รวมทั้งหมด (คน)</th>
+                    </tr>
+                </thead>
+                <tbody id="suspendedGradeSummaryBody">
+                    <!-- JavaScript จะวาดแถวตารางสรุปที่นี่ -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ตัวกรองค้นหาและตารางรายชื่อนักเรียน -->
+    <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
+            <h3 style="color: var(--primary-purple); font-size: 16px; font-weight: 700; margin: 0;">
+                📜 รายชื่อนักเรียนพักการเรียน
+            </h3>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <select id="suspendedFilterGrade" onchange="filterAndRenderSuspendedView()" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1;">
+                    <option value="all">ทุกระดับชั้น</option>
+                    <option value="ม.1">ม.1</option>
+                    <option value="ม.2">ม.2</option>
+                    <option value="ม.3">ม.3</option>
+                    <option value="ม.4">ม.4</option>
+                    <option value="ม.5">ม.5</option>
+                    <option value="ม.6">ม.6</option>
+                </select>
+                <input type="text" id="suspendedSearchInput" placeholder="🔍 ค้นหาชื่อ/เลขประจำตัว..." onkeyup="filterAndRenderSuspendedView()" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1;">
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="data-table" id="suspendedStudentListTable">
+                <thead>
+                    <tr>
+                        <th style="text-align: center;">ลำดับ</th>
+                        <th style="text-align: center;">เลขประจำตัว</th>
+                        <th>ชื่อ-นามสกุล</th>
+                        <th style="text-align: center;">ชั้น/ห้อง</th>
+                        <th style="text-align: center;">เพศ</th>
+                        <th style="text-align: center;">สถานะ</th>
+                        <th style="text-align: center;">หมายเหตุ</th>
+                    </tr>
+                </thead>
+                <tbody id="suspendedStudentListBody">
+                    <!-- JavaScript จะวาดรายชื่อนักเรียนที่นี่ -->
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
 
